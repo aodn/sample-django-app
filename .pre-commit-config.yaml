@@ -18,4 +18,4 @@ repos:
     rev: v1.83.4
     hooks:
       - id: terraform_fmt
-      - id: terragrunt_fmt
+      - id: terraform_validate
