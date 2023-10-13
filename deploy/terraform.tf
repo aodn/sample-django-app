@@ -16,11 +16,11 @@ terraform {
 }
 
 provider "aws" {
-  region  = "ap-northeast-1"
+  region              = "ap-northeast-1"
   allowed_account_ids = ["450356697252"]
   default_tags {
     tags = {
-      Owner = "Stefan"
+      Owner   = "Stefan"
       Project = "ECS Training"
     }
   }
