@@ -105,3 +105,9 @@ venv.bak/
 
 # IDE related config
 .idea/
+
+# Terraform directories and files
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl
