@@ -33,6 +33,13 @@ ALLOWED_HOSTS.extend(
     )
 )
 
+ALLOWED_CIDR_NETS = []
+ALLOWED_CIDR_NETS.extend(
+    filter(
+        None,
+        os.environ.get('ALLOWED_CIDR_NETS', '').split(',')
+    )
+)
 
 # Application definition
 
@@ -51,6 +58,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'allow_cidr.middleware.AllowCIDRMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

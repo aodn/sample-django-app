@@ -12,7 +12,8 @@ services:
       - DB_NAME=app
       - DB_USER=postgres
       - DB_PASS=supersecretpassword
-      - ALLOWED_HOSTS=127.0.0.1,localhost
+      - ALLOWED_HOSTS=*
+      - ALLOWED_CIDR_NETS=127.0.0.0/8
     depends_on:
       - db
 
