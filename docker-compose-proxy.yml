@@ -4,6 +4,8 @@ services:
   app:
     build:
       context: .
+    healthcheck:
+      test: ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
     volumes:
       - ./app:/app
       - static_data:/vol/web
@@ -24,8 +26,7 @@ services:
     depends_on:
       - app
     healthcheck:
-      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8000/ || exit 1"]
-      timeout: 10s
+      test: ["CMD-SHELL", "curl -so /dev/null http://localhost:8000/health || exit 1"]
     ports:
       - "8000:8000"
     volumes:
