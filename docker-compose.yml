@@ -18,8 +18,10 @@ services:
       - DB_USER=postgres
       - DB_PASS=supersecretpassword
       - DEBUG=1
+      - S3_STORAGE_BACKEND=0
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
     image: postgres:10-alpine
@@ -27,3 +29,8 @@ services:
       - POSTGRES_DB=app
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=supersecretpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
