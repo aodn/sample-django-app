@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'core',
     'user',
     'recipe',
+    'storages'
 ]
 
 MIDDLEWARE = [
@@ -155,3 +156,10 @@ AWS_DEFAULT_ACL = 'public-read'
 AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_STORAGE_BUCKET_NAME')
 AWS_S3_REGION_NAME = os.environ.get('S3_STORAGE_BUCKET_REGION', 'us-east-1')
 AWS_QUERYSTRING_AUTH = False
+
+if DEBUG:
+    AWS_ACCESS_KEY_ID = os.getenv('MINIO_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('MINIO_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('S3_STORAGE_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = os.getenv('MINIO_API')
+    AWS_S3_USE_SSL = False

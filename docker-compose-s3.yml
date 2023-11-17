@@ -1,0 +1,71 @@
+version: "3"
+
+services:
+  app:
+    build:
+      context: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app:/app
+    command: >
+      sh -c "python manage.py wait_for_db &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=app
+      - DB_USER=postgres
+      - DB_PASS=supersecretpassword
+      - DEBUG=1
+      - S3_STORAGE_BACKEND=1
+      - S3_STORAGE_BUCKET_NAME=static
+      - MINIO_ACCESS_KEY_ID=user
+      - MINIO_SECRET_ACCESS_KEY=password
+      - MINIO_API=http://172.17.0.1:9000
+    depends_on:
+      createbucket:
+        condition: service_started
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  createbucket:
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc config host add --api s3v4 s3 http://minio:9000 user password;
+      /usr/bin/mc mb s3/static/;
+      /usr/bin/mc anonymous set download s3/static;
+      "
+
+  db:
+    image: postgres:10-alpine
+    environment:
+      - POSTGRES_DB=app
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=supersecretpassword
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - data:/data
+    environment:
+      - "MINIO_ROOT_USER=user"
+      - "MINIO_ROOT_PASSWORD=password"
+    command: server /data --console-address :9001
+
+volumes:
+  data:
