@@ -4,6 +4,8 @@ services:
   app:
     build:
       context: .
+    healthcheck:
+      test: ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
     ports:
       - "8000:8000"
     volumes:

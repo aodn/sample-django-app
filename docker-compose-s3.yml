@@ -4,6 +4,8 @@ services:
   app:
     build:
       context: .
+    healthcheck:
+      test: ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
     ports:
       - "8000:8000"
     volumes:
@@ -20,6 +22,7 @@ services:
       - DEBUG=1
       - S3_STORAGE_BACKEND=1
       - S3_STORAGE_BUCKET_NAME=static
+      - MINIO_STORAGE_BACKEND=1
       - MINIO_ACCESS_KEY_ID=user
       - MINIO_SECRET_ACCESS_KEY=password
       - MINIO_API=http://172.17.0.1:9000
