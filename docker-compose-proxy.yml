@@ -6,6 +6,7 @@ services:
       context: .
     healthcheck:
       test: ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
+    image: api
     volumes:
       - ./app:/app
       - static_data:/vol/web
