@@ -1,9 +1,9 @@
 schemaVersion: 2.0.0
 
 commandTests:
-  - name: check psql is installed
-    command: psql
-    args: ["--version"]
+  - name: check boto3 is installed
+    command: pip
+    args: [ "show", "-q", "boto3" ]
     exitCode: 0
   - name: check django is installed
     command: pip
@@ -12,6 +12,14 @@ commandTests:
   - name: check djangorestframework is installed
     command: pip
     args: ["show", "-q", "djangorestframework"]
+    exitCode: 0
+  - name: check django-allow-cidr is installed
+    command: pip
+    args: ["show", "-q", "django-allow-cidr"]
+    exitCode: 0
+  - name: check django-storages is installed
+    command: pip
+    args: ["show", "-q", "django-storages"]
     exitCode: 0
   - name: check psycopg2 is installed
     command: pip
@@ -28,6 +36,10 @@ commandTests:
   - name: check flake8 is installed
     command: pip
     args: ["show", "-q", "flake8"]
+    exitCode: 0
+  - name: check uwsgi-readiness-check is installed
+    command: pip
+    args: ["show", "-q", "uwsgi-readiness-check"]
     exitCode: 0
 
 fileExistenceTests:
