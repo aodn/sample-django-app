@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 """
 
 import os
+from .aws_secrets import get_secret
+import json
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -40,7 +42,7 @@ ALLOWED_CIDR_NETS.extend(
     )
 )
 
-DEFAULT_AUTO_FIELD='django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 # Application definition
 INSTALLED_APPS = [
@@ -90,6 +92,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'app.wsgi.application'
 
 
+# Retrieve the database secret
+db_secret = None
+if bool(int(os.environ.get('GET_DB_SECRET', 1))):
+    db_secret = json.loads(get_secret(os.environ.get('DB_SECRET_NAME'), os.environ.get('DB_SECRET_REGION')))
+
+db_pass = os.environ.get('DB_PASS') if db_secret is None else db_secret['password']
+
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
@@ -99,7 +108,7 @@ DATABASES = {
         'HOST': os.environ.get('DB_HOST'),
         'NAME': os.environ.get('DB_NAME'),
         'USER': os.environ.get('DB_USER'),
-        'PASSWORD': os.environ.get('DB_PASS'),
+        'PASSWORD': db_pass,
     }
 }
 
@@ -131,7 +140,6 @@ LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'UTC'
 
 USE_I18N = True
-
 
 USE_TZ = True
 
