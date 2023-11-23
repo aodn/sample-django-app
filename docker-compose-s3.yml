@@ -15,9 +15,10 @@ services:
              python manage.py runserver 0.0.0.0:8000"
     environment:
       - DB_HOST=db
-      - DB_NAME=app
+      - DB_NAME=api
       - DB_USER=postgres
       - DB_PASS=supersecretpassword
+      - GET_DB_SECRET=0
       - DEBUG=1
       - S3_STORAGE_BACKEND=1
       - S3_STORAGE_BUCKET_NAME=static
@@ -47,7 +48,7 @@ services:
   db:
     image: postgres:12-alpine
     environment:
-      - POSTGRES_DB=app
+      - POSTGRES_DB=api
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=supersecretpassword
     healthcheck:

@@ -12,9 +12,10 @@ services:
       - static_data:/vol/web
     environment:
       - DB_HOST=db
-      - DB_NAME=app
+      - DB_NAME=api
       - DB_USER=postgres
       - DB_PASS=supersecretpassword
+      - GET_DB_SECRET=0
       - ALLOWED_HOSTS=*
       - ALLOWED_CIDR_NETS=127.0.0.0/8
       - S3_STORAGE_BACKEND=0
@@ -36,7 +37,7 @@ services:
   db:
     image: postgres:10-alpine
     environment:
-      - POSTGRES_DB=app
+      - POSTGRES_DB=api
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=supersecretpassword
     healthcheck:
