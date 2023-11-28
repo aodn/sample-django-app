@@ -87,8 +87,9 @@ jobs:
 
       - name: Get Current Task Definition
         id: get-current-task-definition
-        run: |
-          aws ecs describe-task-definition --task-definition ${{ env.FAMILY }} --query taskDefinition > task-definition.json
+        run: >
+          aws ecs describe-task-definition --task-definition ${{ env.FAMILY }}
+          --query taskDefinition > task-definition.json
 
       - name: Update API image tag
         id: update-api-image-tag
@@ -96,7 +97,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: api
-          image: 450356697252.dkr.ecr.ap-southeast-2.amazonaws.com/nginx:${{ env.TAG }}
+          image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
 
       - name: Display Rendered Template
         if: ${{ env.ACT }}
