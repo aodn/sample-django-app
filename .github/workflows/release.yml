@@ -7,6 +7,7 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
+  FAMILY: api-service
   TAG: ${{ github.event.release.tag_name }}
 
 permissions:
@@ -76,47 +77,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Render api definition
-        id: render-api-definition
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
+      - name: Configure AWS Credentials
+        if: ${{ !env.ACT }}
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          task-definition: ./templates/api_definition.json
-          container-name: api
-          image: 450356697252.dkr.ecr.ap-southeast-2.amazonaws.com/api:${{ env.TAG }}
-          environment-variables: |
-            DJANGO_SECRET_KEY=change_me
-            DB_HOST=${{ vars.DB_HOST }}
-            DB_NAME=api
-            DB_USER=api
-            DB_SECRET_NAME=${{ vars.DB_SECRET_NAME }}
-            DB_SECRET_REGION=${{ vars.DB_SECRET_REGION }}
-            ALLOWED_HOSTS=*
-            ALLOWED_CIDR_NETS=10.32.48.0/20,10.32.64.0/20,10.32.80.0/20
-            S3_STORAGE_BUCKET_NAME=api-bucket-450356697252
-            S3_STORAGE_BUCKET_REGION=ap-southeast-2
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Render nginx proxy definition
-        id: render-proxy-definition
+      - name: Get Current Task Definition
+        id: get-current-task-definition
+        run: |
+          aws ecs describe-task-definition --task-definition ${{ env.FAMILY }} --query taskDefinition > task-definition.json
+
+      - name: Update API image tag
+        id: update-api-image-tag
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
-          task-definition: ${{ steps.render-api-definition.outputs.task-definition }}
-          container-name: proxy
-          image: 450356697252.dkr.ecr.ap-southeast-2.amazonaws.com/nginx:latest
-          environment-variables: |
-            APP_HOST=127.0.0.1
-            APP_PORT=9000
-            LISTEN_PORT=80
+          task-definition: task-definition.json
+          container-name: api
+          image: 450356697252.dkr.ecr.ap-southeast-2.amazonaws.com/nginx:${{ env.TAG }}
 
       - name: Display Rendered Template
         if: ${{ env.ACT }}
         id: display-rendered-template
-        run: cat ${{ steps.render-proxy-definition.outputs.task-definition }} | jq -r
+        run: cat ${{ steps.update-api-image-tag.outputs.task-definition }} | jq -r
 
       - name: Deploy to Amazon ECS service
         if: ${{ !env.ACT }}
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
-          task-definition: ${{ steps.render-proxy-definition.outputs.task-definition }}
+          task-definition: ${{ steps.update-api-image-tag.outputs.task-definition }}
           service: api-service
           cluster: api-cluster
           force-new-deployment: true
