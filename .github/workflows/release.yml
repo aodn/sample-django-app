@@ -85,14 +85,14 @@ jobs:
           image: 450356697252.dkr.ecr.ap-southeast-2.amazonaws.com/api:${{ env.TAG }}
           environment-variables: |
             DJANGO_SECRET_KEY=change_me
-            DB_HOST=mydbhost.xyz
+            DB_HOST=${{ vars.DB_HOST }}
             DB_NAME=api
             DB_USER=api
-            DB_SECRET_NAME=db_secret_name
-            DB_SECRET_REGION=ap-southeast-2
+            DB_SECRET_NAME=${{ vars.DB_SECRET_NAME }}
+            DB_SECRET_REGION=${{ vars.DB_SECRET_REGION }}
             ALLOWED_HOSTS=*
-            ALLOWED_CIDR_NETS=0.0.0.0/0
-            S3_STORAGE_BUCKET_NAME=mybucket
+            ALLOWED_CIDR_NETS=10.32.48.0/20,10.32.64.0/20,10.32.80.0/20
+            S3_STORAGE_BUCKET_NAME=api-bucket-450356697252
             S3_STORAGE_BUCKET_REGION=ap-southeast-2
 
       - name: Render nginx proxy definition
