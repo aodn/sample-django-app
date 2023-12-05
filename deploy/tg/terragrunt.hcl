@@ -1,11 +1,11 @@
 locals {
   aws_account_id = trim(run_cmd("--terragrunt-quiet", "sh", "-c", "aws sts get-caller-identity --query=Account 2> /dev/null || true"), "\"")
-  aws_role_name  = get_env("AWS_ROLE_NAME", "AodnTerraformAdminRole")
-  aws_account    = get_env("AWS_ACCOUNT_ID", local.aws_account_id)
-  aws_region     = get_env("AWS_REGION", "ap-southeast-2")
-  state_bucket   = "tfstate-${local.aws_account}-${local.aws_region}"
-  state_key      = "apps/${basename(get_repo_root())}/${basename(get_terragrunt_dir())}.tfstate"
-  aws_role_arn   = "arn:aws:iam::${local.aws_account}:role/${local.aws_role_name}"
+  #  aws_role_name  = get_env("AWS_ROLE_NAME", "AodnTerraformAdminRole")
+  aws_account  = get_env("AWS_ACCOUNT_ID", local.aws_account_id)
+  aws_region   = get_env("AWS_REGION", "ap-southeast-2")
+  state_bucket = "tfstate-${local.aws_account}-${local.aws_region}"
+  state_key    = "apps/${basename(get_repo_root())}/${basename(get_terragrunt_dir())}.tfstate"
+  #  aws_role_arn   = "arn:aws:iam::${local.aws_account}:role/${local.aws_role_name}"
 }
 
 generate "providers" {
@@ -15,9 +15,9 @@ generate "providers" {
 provider "aws" {
   region              = "${local.aws_region}"
   allowed_account_ids = ["${local.aws_account}"]
-  assume_role {
-    role_arn = "${local.aws_role_arn}"
-  }
+#  assume_role {
+#    role_arn = "${local.aws_role_arn}"
+#  }
   default_tags {
     tags = {
       "Environment" = "apps"
@@ -46,6 +46,6 @@ remote_state {
     skip_region_validation      = true
     disable_bucket_update       = true
     encrypt                     = true
-    role_arn                    = local.aws_role_arn
+    #    role_arn                    = local.aws_role_arn
   }
 }
