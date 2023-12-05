@@ -15,9 +15,6 @@ generate "providers" {
 provider "aws" {
   region              = "${local.aws_region}"
   allowed_account_ids = ["${local.aws_account}"]
-#  assume_role {
-#    role_arn = "${local.aws_role_arn}"
-#  }
   default_tags {
     tags = {
       "Environment" = "apps"
