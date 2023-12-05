@@ -89,8 +89,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Expose environment
-        run: echo '${{ toJSON(github) }}'
+      - name: Configure AWS Credentials
+        if: ${{ !env.ACT }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
 
       - name: Gruntwork Terragrunt
         uses: gruntwork-io/terragrunt-action@v2.0.0
@@ -102,5 +107,6 @@ jobs:
         env:
           AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
+          AWS_ROLE_NAME: ${{ vars.AWS_ROLE_NAME }}
           ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
           PARAMETER_NAME: ${{ vars.PARAMETER_NAME }}
