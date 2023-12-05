@@ -20,6 +20,7 @@ inputs = {
   app_hostnames  = ["api", "sample-django-app"]
   db_secret_name = "/rds/stefan-db/primary/evaluation/api"
   ecr_registry   = get_env("ECR_REGISTRY", "450356697252.dkr.ecr.ap-southeast-2.amazonaws.com")
+  image_tag      = get_env("IMAGE_TAG", "latest")
   parameter_name = get_env("PARAMETER_NAME", "/apps/shared/devops/sydney")
   s3_buckets     = dependency.s3.outputs.wrapper
 }
