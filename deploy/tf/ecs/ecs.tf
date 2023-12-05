@@ -86,7 +86,7 @@ module "ecs" {
         }
         proxy = {
           name  = "proxy"
-          image = "${var.ecr_registry}/nginx-proxy:${var.image_tag}"
+          image = "${var.ecr_registry}/nginx-proxy:latest"
           health_check = {
             command = ["CMD-SHELL", "curl -so /dev/null http://localhost/health || exit 1"]
           }

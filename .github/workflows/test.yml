@@ -14,77 +14,78 @@ permissions:
   contents: read    # This is required for actions/checkout
 
 jobs:
-#  build_test_push:
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v4
-#
-#      - name: Set up QEMU
-#        uses: docker/setup-qemu-action@v3
-#
-#      - name: Set up Docker Buildx
-#        uses: docker/setup-buildx-action@v3
-#
-#      - name: Expose environment
-#        run: echo '${{ toJSON(github) }}'
-#
-#      - name: set tag
-#        if: ${{ !env.ACT }}
-#        run: |
-#          BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-#          echo TAG=${{ env.TAG_PREFIX}}-${BRANCH_NAME/\//_} >> $GITHUB_ENV
-#
-#      - name: set tag when running locally in act
-#        if: ${{ env.ACT }}
-#        run: |
-#          echo TAG=latest >> $GITHUB_ENV
-#
-#      - name: Set up docker structure test
-#        run: >
-#          curl -LO
-#          https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
-#          && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
-#          /usr/local/bin/container-structure-test
-#
-#      - name: Configure AWS Credentials
-#        if: ${{ !env.ACT }}
-#        uses: aws-actions/configure-aws-credentials@v4
-#        with:
-#          audience: sts.amazonaws.com
-#          aws-region: ${{ env.AWS_REGION }}
-#          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-#
-#      - name: Login to ECR
-#        if: ${{ !env.ACT }}
-#        uses: docker/login-action@v3
-#        with:
-#          registry: ${{ vars.ECR_REGISTRY }}
-#
-#      - name: Build
-#        uses: docker/build-push-action@v5
-#        with:
-#          context: .
-#          load: true
-#          tags: ${{ env.TAG }}
-#
-#      - name: Test
-#        run: |
-#          container-structure-test test --image ${{ env.TAG }} --config tests/config.yaml
-#
-#      - name: Build and push
-#        if: ${{ !env.ACT }}
-#        uses: docker/build-push-action@v5
-#        with:
-#          context: .
-##          platforms: linux/amd64,linux/arm64
-#          push: true
-#          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
+  build_test_push:
+    runs-on: ubuntu-latest
+    outputs:
+      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: set tag
+        id: set_tag
+        if: ${{ !env.ACT }}
+        run: |
+          BRANCH_NAME=${{ github.head_ref || github.ref_name }}
+          echo TAG=${{ env.TAG_PREFIX}}-${BRANCH_NAME/\//_} >> $GITHUB_ENV
+          echo "image_tag=${{ env.TAG_PREFIX}}-${BRANCH_NAME/\//_}" >> $GITHUB_OUTPUT
+
+      - name: set tag when running locally in act
+        if: ${{ env.ACT }}
+        run: |
+          echo TAG=latest >> $GITHUB_ENV
+
+      - name: Set up docker structure test
+        run: >
+          curl -LO
+          https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
+          && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
+          /usr/local/bin/container-structure-test
+
+      - name: Configure AWS Credentials
+        if: ${{ !env.ACT }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Login to ECR
+        if: ${{ !env.ACT }}
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.ECR_REGISTRY }}
+
+      - name: Build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ env.TAG }}
+
+      - name: Test
+        run: |
+          container-structure-test test --image ${{ env.TAG }} --config tests/config.yaml
+
+      - name: Build and push
+        if: ${{ !env.ACT }}
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+#          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
 
   staging_deploy_plan:
     runs-on: ubuntu-latest
     environment: staging
-#    needs: build_test_push
+    needs: build_test_push
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -109,12 +110,15 @@ jobs:
           AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
           ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ needs.build_test_push.outputs.image_tag }}
           PARAMETER_NAME: ${{ vars.PARAMETER_NAME }}
+          TF_INPUT: 0
+          TF_IN_AUTOMATION: true
 
   staging_deploy_apply:
     runs-on: ubuntu-latest
     environment: staging
-    needs: staging_deploy_plan
+    needs: [staging_deploy_plan, build_test_push]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -127,7 +131,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
 
-      - name: Terragrunt Plan
+      - name: Terragrunt Apply
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
@@ -139,6 +143,7 @@ jobs:
           AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
           AWS_REGION: ${{ vars.AWS_REGION }}
           ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
+          IMAGE_TAG: ${{ needs.build_test_push.outputs.image_tag }}
           PARAMETER_NAME: ${{ vars.PARAMETER_NAME }}
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
