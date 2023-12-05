@@ -67,11 +67,11 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${{ env.TAG }}
+          tags: ${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
 
       - name: Test
         run: |
-          container-structure-test test --image ${{ env.TAG }} --config tests/config.yaml
+          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:${{ env.TAG }} --config tests/config.yaml
 
       - name: Build and push
         if: ${{ !env.ACT }}
