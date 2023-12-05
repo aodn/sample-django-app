@@ -1,5 +1,5 @@
 locals {
-  aws_account  = get_env("AWS_ACCOUNT_ID", local.aws_account_id)
+  aws_account  = get_env("AWS_ACCOUNT_ID")
   aws_region   = get_env("AWS_REGION", "ap-southeast-2")
   project_name = "sample-django-app"
   state_bucket = "tfstate-${local.aws_account}-${local.aws_region}"
