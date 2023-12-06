@@ -16,6 +16,7 @@ permissions:
 jobs:
   build_test_push:
     runs-on: ubuntu-latest
+    environment: staging
     outputs:
       image_tag: ${{ steps.set_tag.outputs.image_tag }}
     steps:
