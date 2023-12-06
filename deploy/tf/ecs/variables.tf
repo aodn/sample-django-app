@@ -45,6 +45,11 @@ variable "image_tag" {
   default     = "latest"
 }
 
+variable "environment" {
+  description = "Environment name to prepend/append to resource names"
+  type        = string
+}
+
 variable "subnet_ids" {
   description = "ID's of the subnets to deploy the container too"
   type        = list(string)

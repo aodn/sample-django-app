@@ -5,8 +5,8 @@ include "global" {
 
 inputs = {
   items = {
-    sample-django-app-bucket = {
-      bucket                   = "sample-django-app-${local.global.aws_account}"
+    "sample-django-app-${local.global.environment}-${local.global.aws_account}" = {
+      bucket                   = "sample-django-app-${local.global.environment}-${local.global.aws_account}"
       acl                      = "public-read"
       block_public_acls        = false
       block_public_policy      = false

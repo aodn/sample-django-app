@@ -1,9 +1,10 @@
 locals {
   aws_account  = get_env("AWS_ACCOUNT_ID")
   aws_region   = get_env("AWS_REGION", "ap-southeast-2")
+  environment  = get_env("ENVIRONMENT")
   project_name = "sample-django-app"
   state_bucket = "tfstate-${local.aws_account}-${local.aws_region}"
-  state_key    = "apps/${local.project_name}/${basename(get_terragrunt_dir())}.tfstate"
+  state_key    = "apps/${local.project_name}/${local.environment}/${basename(get_terragrunt_dir())}.tfstate"
 }
 
 generate "providers" {
