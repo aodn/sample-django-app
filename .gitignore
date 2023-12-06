@@ -106,7 +106,8 @@ venv.bak/
 # IDE related config
 .idea/
 
-# Terraform directories and files
+# Terraform/Terragrunt directories and files
 **/.terraform/*
+**/.terragrunt-cache/
 *.tfstate
 *.tfstate.*
