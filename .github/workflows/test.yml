@@ -2,6 +2,8 @@ name: build and test
 
 on:
   pull_request:
+    types:
+      - opened
     branches:
       - "master"
 
@@ -98,6 +100,18 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
 
+      - name: Expose github environment as shell variables
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
+          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
+          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
+
       - name: Terragrunt Plan
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
@@ -107,11 +121,6 @@ jobs:
           tg_dir: './deploy/tg'
           tg_command: 'run-all plan'
         env:
-          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
-          IMAGE_TAG: ${{ needs.build_test_push.outputs.image_tag }}
-          PARAMETER_NAME: ${{ vars.PARAMETER_NAME }}
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
 
@@ -131,6 +140,18 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/${{ vars.AWS_ROLE_NAME }}
 
+      - name: Expose github environment as shell variables
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+        run: |
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
+          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
+          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
+          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
+
       - name: Terragrunt Apply
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
@@ -140,10 +161,5 @@ jobs:
           tg_dir: './deploy/tg'
           tg_command: 'run-all apply'
         env:
-          AWS_ACCOUNT_ID: ${{ vars.AWS_ACCOUNT_ID }}
-          AWS_REGION: ${{ vars.AWS_REGION }}
-          ECR_REGISTRY: ${{ vars.ECR_REGISTRY }}
-          IMAGE_TAG: ${{ needs.build_test_push.outputs.image_tag }}
-          PARAMETER_NAME: ${{ vars.PARAMETER_NAME }}
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
