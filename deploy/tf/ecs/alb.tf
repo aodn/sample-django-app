@@ -3,7 +3,7 @@ resource "aws_lb_target_group" "app" {
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
-  vpc_id      = local.params.vpc_id
+  vpc_id      = var.vpc_id
 
   health_check {
     enabled = true
@@ -13,20 +13,20 @@ resource "aws_lb_target_group" "app" {
 
 resource "aws_route53_record" "app" {
   for_each = toset(var.app_hostnames)
-  zone_id  = local.params.dns_zone_id
+  zone_id  = var.dns_zone_id
   name     = each.value
   type     = "A"
 
   alias {
-    name                   = local.params.alb_dns_name
-    zone_id                = local.params.alb_zone_id
+    name                   = var.alb_dns_name
+    zone_id                = var.alb_zone_id
     evaluate_target_health = true
   }
 }
 
 resource "aws_lb_listener_rule" "app_fgate" {
   for_each     = toset(var.app_hostnames)
-  listener_arn = local.params.alb_https_listener
+  listener_arn = var.alb_listener_arn
 
   action {
     type             = "forward"

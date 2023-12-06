@@ -58,16 +58,16 @@ module "ecs" {
           essential                = true
           memory_reservation       = 256
           environment = [
-            { name = "DJANGO_SECRET_KEY", value = "changeme" },
-            { name = "DB_HOST", value = local.params.rds_url },
-            { name = "DB_NAME", value = "api" },
-            { name = "DB_USER", value = "api" },
+            { name = "ALLOWED_HOSTS", value = var.allowed_hosts },
+            { name = "ALLOWED_CIDR_NETS", value = var.allowed_cidr_nets },
+            { name = "DJANGO_SECRET_KEY", value = var.django_secret_key },
+            { name = "DB_HOST", value = var.db_host },
+            { name = "DB_NAME", value = var.db_name },
+            { name = "DB_USER", value = var.db_user },
             { name = "DB_SECRET_NAME", value = var.db_secret_name },
             { name = "DB_SECRET_REGION", value = var.db_secret_region },
-            { name = "ALLOWED_HOSTS", value = "*" },
-            { name = "ALLOWED_CIDR_NETS", value = "${join(",", local.params.vpc_subnet_cidrs.private)}" },
-            { name = "S3_STORAGE_BUCKET_NAME", value = var.s3_buckets["sample-django-app-bucket"].s3_bucket_id },
-            { name = "S3_STORAGE_BUCKET_REGION", value = var.s3_buckets["sample-django-app-bucket"].s3_bucket_region }
+            { name = "S3_STORAGE_BUCKET_NAME", value = var.s3_storage_bucket_name },
+            { name = "S3_STORAGE_BUCKET_REGION", value = var.s3_storage_bucket_region }
           ]
           port_mappings = [
             {
@@ -96,13 +96,13 @@ module "ecs" {
           environment = [
             { name = "APP_HOST", value = "127.0.0.1" },
             { name = "APP_PORT", value = 9000 },
-            { name = "LISTEN_PORT", value = 80 }
+            { name = "LISTEN_PORT", value = var.container_port }
           ]
           port_mappings = [
             {
               name          = "nginx"
-              containerPort = 80
-              hostPort      = 80
+              containerPort = var.container_port
+              hostPort      = var.container_port
             }
           ]
           mount_points = [
@@ -124,19 +124,19 @@ module "ecs" {
         service = {
           target_group_arn = aws_lb_target_group.app.arn
           container_name   = "proxy"
-          container_port   = 80
+          container_port   = var.container_port
         }
       }
 
-      subnet_ids = local.params.vpc_private_subnets
+      subnet_ids = var.subnet_ids
 
       security_group_rules = {
         ingress_vpc = {
           type        = "ingress"
-          from_port   = 80
-          to_port     = 80
+          from_port   = var.container_port
+          to_port     = var.container_port
           protocol    = "tcp"
-          cidr_blocks = [local.params.vpc_cidr]
+          cidr_blocks = [var.vpc_cidr]
         }
         egress_all = {
           type        = "egress"
@@ -158,8 +158,8 @@ module "ecs" {
             "s3:PutObjectAcl"
           ]
           resources = [
-            var.s3_buckets["sample-django-app-bucket"].s3_bucket_arn,
-            "${var.s3_buckets["sample-django-app-bucket"].s3_bucket_arn}/*"
+            "arn:aws:s3:::${var.s3_storage_bucket_name}",
+            "arn:aws:s3:::${var.s3_storage_bucket_name}/*"
           ]
         },
         {
@@ -167,7 +167,7 @@ module "ecs" {
             "secretsmanager:GetSecretValue"
           ]
           resources = [
-            "arn:aws:secretsmanager:ap-southeast-2:450356697252:secret:/rds/stefan-db/primary/evaluation/api*"
+            "arn:aws:secretsmanager:${var.db_secret_region}:*:secret:${var.db_secret_name}*"
           ]
         }
       ]
