@@ -4,7 +4,7 @@ include "global" {
 }
 
 inputs = {
-  parameter_name = get_env("PARAMETER_NAME", "/apps/shared/devops/sydney")
+  parameter_name = get_env("SSM_PARAMETER_NAME", "/apps/shared/devops/sydney")
 }
 
 locals {
