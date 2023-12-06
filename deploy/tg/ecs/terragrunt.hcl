@@ -49,7 +49,7 @@ inputs = {
   environment = local.global.environment
 
   # DNS hostnames to associate with the container
-  app_hostnames = ["api", "sample-django-app"]
+  app_hostnames = ["api-${local.global.environment}"]
 
   # container image repository and tag
   ecr_registry   = get_env("ECR_REGISTRY", "450356697252.dkr.ecr.ap-southeast-2.amazonaws.com")
