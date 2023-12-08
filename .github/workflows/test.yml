@@ -175,7 +175,7 @@ jobs:
           echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
           echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
 
-      - name: Terragrunt Plan
+      - name: Terragrunt Apply
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
