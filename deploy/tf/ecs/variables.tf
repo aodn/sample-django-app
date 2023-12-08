@@ -1,16 +1,16 @@
 variable "alb_dns_name" {
   description = "The DNS name of the application load-balancer"
-  type = string
+  type        = string
+}
+
+variable "alb_https_listener_arn" {
+  description = "The ARN of the application load-balancer listener"
+  type        = string
 }
 
 variable "alb_zone_id" {
   description = "The DNS zone ID of the application load-balancer"
-  type = string
-}
-
-variable "alb_listener_arn" {
-  description = "The ARN of the application load-balancer listener"
-  type = string
+  type        = string
 }
 
 variable "app_hostnames" {
@@ -24,25 +24,19 @@ variable "container_port" {
   default     = 80
 }
 
-variable "dns_zone_id" {
-  description = "The ID of the route53 zone"
-  type = string
-}
-
-variable "ecr_registry" {
-  description = "The URL of the docker registry"
+variable "db_host" {
+  description = "Override variable for database host"
   type        = string
 }
 
-variable "ecr_repository" {
+variable "ecr_repository_url" {
   description = "The name of the repository to pull the image from"
   type        = string
 }
 
-variable "image_tag" {
-  description = "The tag of the docker image to pull from ECR"
+variable "image" {
+  description = "The digest/tag of the docker image to pull from ECR"
   type        = string
-  default     = "latest"
 }
 
 variable "environment" {
@@ -50,9 +44,19 @@ variable "environment" {
   type        = string
 }
 
-variable "subnet_ids" {
+variable "rds_url" {
+  description = "The hostname of the database instance"
+  type        = string
+}
+
+variable "subnets_private" {
   description = "ID's of the subnets to deploy the container too"
-  type        = list(string)
+  type        = string
+}
+
+variable "subnets_private_cidr" {
+  description = "CIDR's of the subnets to deploy the container too"
+  type        = string
 }
 
 variable "vpc_cidr" {
@@ -62,6 +66,11 @@ variable "vpc_cidr" {
 
 variable "vpc_id" {
   description = "The ID of the VPC"
+  type        = string
+}
+
+variable "zone_id" {
+  description = "The ID of the route53 zone"
   type        = string
 }
 
@@ -78,11 +87,6 @@ variable "allowed_cidr_nets" {
 
 variable "django_secret_key" {
   description = "The secret key for django app"
-  type        = string
-}
-
-variable "db_host" {
-  description = "The hostname of the database instance"
   type        = string
 }
 

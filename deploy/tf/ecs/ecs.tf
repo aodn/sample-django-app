@@ -1,3 +1,19 @@
+locals {
+  # set container definition variables with default fallback values from ssm if available
+  allowed_hosts            = var.allowed_hosts
+  allowed_cidr_nets        = coalesce(var.allowed_cidr_nets, var.subnets_private_cidr)
+  django_secret_key        = var.django_secret_key
+  db_host                  = coalesce(var.db_host, var.rds_url)
+  db_name                  = var.db_name
+  db_user                  = var.db_user
+  db_secret_name           = var.db_secret_name
+  db_secret_region         = var.db_secret_region
+  s3_storage_bucket_name   = var.s3_storage_bucket_name
+  s3_storage_bucket_region = var.s3_storage_bucket_region
+
+  ecr_registry = split("/", var.ecr_repository_url)[0]
+}
+
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
   version = "~> 5.7.0"
@@ -50,7 +66,7 @@ module "ecs" {
       container_definitions = {
         api = {
           name  = "api"
-          image = "${var.ecr_registry}/api:${var.image_tag}"
+          image = startswith(var.image, "sha256") ? "${var.ecr_repository_url}@${var.image}" : "${var.ecr_repository_url}:${var.image}"
           health_check = {
             command = ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
           }
@@ -58,16 +74,16 @@ module "ecs" {
           essential                = true
           memory_reservation       = 256
           environment = [
-            { name = "ALLOWED_HOSTS", value = var.allowed_hosts },
-            { name = "ALLOWED_CIDR_NETS", value = var.allowed_cidr_nets },
-            { name = "DJANGO_SECRET_KEY", value = var.django_secret_key },
-            { name = "DB_HOST", value = var.db_host },
-            { name = "DB_NAME", value = var.db_name },
-            { name = "DB_USER", value = var.db_user },
-            { name = "DB_SECRET_NAME", value = var.db_secret_name },
-            { name = "DB_SECRET_REGION", value = var.db_secret_region },
-            { name = "S3_STORAGE_BUCKET_NAME", value = var.s3_storage_bucket_name },
-            { name = "S3_STORAGE_BUCKET_REGION", value = var.s3_storage_bucket_region }
+            { name = "ALLOWED_HOSTS", value = local.allowed_hosts },
+            { name = "ALLOWED_CIDR_NETS", value = local.allowed_cidr_nets },
+            { name = "DJANGO_SECRET_KEY", value = local.django_secret_key },
+            { name = "DB_HOST", value = local.db_host },
+            { name = "DB_NAME", value = local.db_name },
+            { name = "DB_USER", value = local.db_user },
+            { name = "DB_SECRET_NAME", value = local.db_secret_name },
+            { name = "DB_SECRET_REGION", value = local.db_secret_region },
+            { name = "S3_STORAGE_BUCKET_NAME", value = local.s3_storage_bucket_name },
+            { name = "S3_STORAGE_BUCKET_REGION", value = local.s3_storage_bucket_region }
           ]
           port_mappings = [
             {
@@ -86,7 +102,7 @@ module "ecs" {
         }
         proxy = {
           name  = "proxy"
-          image = "${var.ecr_registry}/nginx-proxy:latest"
+          image = "${local.ecr_registry}/nginx-proxy:latest"
           health_check = {
             command = ["CMD-SHELL", "curl -so /dev/null http://localhost/health || exit 1"]
           }
@@ -128,7 +144,7 @@ module "ecs" {
         }
       }
 
-      subnet_ids = var.subnet_ids
+      subnet_ids = split(",", var.subnets_private)
 
       security_group_rules = {
         ingress_vpc = {
