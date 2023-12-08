@@ -1,8 +1,9 @@
 locals {
   aws_account  = get_env("AWS_ACCOUNT_ID")
-  aws_region   = get_env("AWS_REGION", "ap-southeast-2")
+  aws_region   = get_env("AWS_REGION")
   environment  = get_env("ENVIRONMENT")
   project_name = "sample-django-app"
+  repo_url     = run_cmd("--terragrunt-quiet", "sh", "-c", "git config --get remote.origin.url")
   state_bucket = "tfstate-${local.aws_account}-${local.aws_region}"
   state_key    = "apps/${local.project_name}/${local.environment}/${basename(get_terragrunt_dir())}.tfstate"
 }
@@ -17,9 +18,10 @@ provider "aws" {
   default_tags {
     tags = {
       "Environment" = "apps"
-      "ManagedBy" = "Terradeploy Apps - ${local.state_bucket}/${local.state_key}"
+      "ManagedBy" = "Apps - ${local.state_bucket}/${local.state_key}"
       "Owner" = "Platform Engineering"
       "Project" = "AODN Applications"
+      "Repository" = "${local.repo_url}"
     }
   }
 }
