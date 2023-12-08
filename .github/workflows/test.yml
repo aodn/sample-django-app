@@ -1,4 +1,4 @@
-name: build and test
+name: Build, Test and Deploy
 
 on:
   pull_request:
@@ -7,7 +7,6 @@ on:
 
 env:
   AWS_REGION: ap-southeast-2
-  TAG_PREFIX: test
 
 permissions:
   id-token: write   # This is required for requesting the JWT
@@ -18,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: staging
     outputs:
-      image_tag: ${{ steps.set_tag.outputs.image_tag }}
+      image_digest: ${{ steps.build_and_push.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,20 +28,16 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: set tag
+      - name: Set Image Tag
         id: set_tag
-        if: ${{ !env.ACT }}
         run: |
           BRANCH_NAME=${{ github.head_ref || github.ref_name }}
-          echo TAG=${{ env.TAG_PREFIX}}-${BRANCH_NAME/\//_} >> $GITHUB_ENV
+          echo TAG=${{ env.TAG_PREFIX }}-${BRANCH_NAME//\//_} >> $GITHUB_ENV
           echo "image_tag=${{ env.TAG_PREFIX}}-${BRANCH_NAME/\//_}" >> $GITHUB_OUTPUT
+        env:
+          TAG_PREFIX: dev
 
-      - name: set tag when running locally in act
-        if: ${{ env.ACT }}
-        run: |
-          echo TAG=latest >> $GITHUB_ENV
-
-      - name: Set up docker structure test
+      - name: Setup Docker Structure Test
         run: >
           curl -LO
           https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
@@ -50,7 +45,6 @@ jobs:
           /usr/local/bin/container-structure-test
 
       - name: Configure AWS Credentials
-        if: ${{ !env.ACT }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           audience: sts.amazonaws.com
@@ -58,27 +52,27 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Login to ECR
-        if: ${{ !env.ACT }}
         uses: docker/login-action@v3
         with:
           registry: ${{ vars.ECR_REGISTRY }}
 
-      - name: Build
+      - name: Build Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           load: true
           tags: ${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
 
-      - name: Test
+      - name: Test Docker Image
         run: |
           container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:${{ env.TAG }} --config tests/config.yaml
 
-      - name: Build and push
-        if: ${{ !env.ACT }}
+      - name: Build and Push Docker Image
+        id: build_and_push
         uses: docker/build-push-action@v5
         with:
           context: .
+#          Only building for AMD64 for now
 #          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ env.TAG }}
@@ -92,20 +86,34 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
-        if: ${{ !env.ACT }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
+      - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
+        env:
+          deploy_path: ./deploy/tg/ecs
+          environment: ${{ vars.ENVIRONMENT }}
+        run: |
+          params=( apps/alb/${{ vars.ALB }} apps/ecr/${{ vars.ECR_REPOSITORY }} core rds/${{ vars.RDS_DB }} )
+          for param in ${params[@]}; do
+            filename="$environment.${param//\//-}.auto.tfvars.json"
+            aws ssm get-parameters-by-path \
+              --path "/$param/" \
+              --recursive \
+              --output json \
+              --query 'Parameters[*]' \
+              | jq '. |= map({ (.Name | split("/")[-1]): .Value }) | add' \
+              > "$deploy_path/$filename"
+          done
+
       - name: Expose github environment as shell variables
         env:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
           VARS_CONTEXT: ${{ toJson(vars) }}
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
           echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
@@ -122,6 +130,8 @@ jobs:
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
+          # get the image digest from the build job with optional override from vars context
+          TF_VAR_image_tag: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
   staging_deploy_apply:
     runs-on: ubuntu-latest
@@ -132,26 +142,40 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Configure AWS Credentials
-        if: ${{ !env.ACT }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           audience: sts.amazonaws.com
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
+      - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
+        env:
+          deploy_path: ./deploy/tg/ecs
+          environment: ${{ vars.ENVIRONMENT }}
+        run: |
+          params=( apps/alb/${{ vars.ALB }} apps/ecr/${{ vars.ECR_REPOSITORY }} core rds/${{ vars.RDS_DB }} )
+          for param in ${params[@]}; do
+            filename="$environment.${param//\//-}.auto.tfvars.json"
+            aws ssm get-parameters-by-path \
+              --path "/$param/" \
+              --recursive \
+              --output json \
+              --query 'Parameters[*]' \
+              | jq '. |= map({ (.Name | split("/")[-1]): .Value }) | add' \
+              > "$deploy_path/$filename"
+          done
+
       - name: Expose github environment as shell variables
         env:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
           VARS_CONTEXT: ${{ toJson(vars) }}
         run: |
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#setting-an-environment-variable
-          # https://docs.github.com/en/actions/using-workflows/workflow-commands-for-github-actions#multiline-strings
           EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
           to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
           echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
           echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
 
-      - name: Terragrunt Apply
+      - name: Terragrunt Plan
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
@@ -162,3 +186,5 @@ jobs:
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
+          # get the image digest from the build job with optional override from vars context
+          TF_VAR_image_tag: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
