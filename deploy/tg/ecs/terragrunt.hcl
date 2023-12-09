@@ -17,6 +17,7 @@ include "global" {
 }
 
 inputs = {
+  app_name    = get_env("APP_NAME")
   environment = local.global.environment
 
   # DNS hostnames to associate with the container

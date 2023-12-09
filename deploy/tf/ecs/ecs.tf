@@ -19,7 +19,7 @@ module "ecs" {
   version = "~> 5.7.0"
 
   # Cluster Configuration
-  cluster_name = "sample-django-app-${var.environment}"
+  cluster_name = "${var.app_name}-${var.environment}"
   cluster_configuration = {
     name  = "containerInsights"
     value = "enabled"
@@ -41,7 +41,7 @@ module "ecs" {
   # Service Configuration
   services = {
 
-    "sample-django-app-${var.environment}" = {
+    "${var.app_name}-${var.environment}" = {
       capacity_provider_strategy = {
         dedicated = {
           base              = 0
