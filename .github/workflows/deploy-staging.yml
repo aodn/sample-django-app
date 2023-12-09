@@ -193,7 +193,7 @@ jobs:
         id: create_draft_release
         uses: softprops/action-gh-release@v1
         with:
-          name: Draft Release - '${{ github.event.push.head_commit.message }}'
+          name: Draft Release - '${{ github.event.head_commit.message }}'
           body: |
             ## Info
             Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
