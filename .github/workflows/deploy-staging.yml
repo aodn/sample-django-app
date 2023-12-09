@@ -178,7 +178,7 @@ jobs:
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
-  create_release:
+  create_draft_release:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build_test_push, staging_deploy_apply]
@@ -193,7 +193,7 @@ jobs:
         id: create_draft_release
         uses: softprops/action-gh-release@v1
         with:
-          name: Draft Release - '${{ github.event.push.head_commit.message }}'
+          name: Draft Release - '${{ github.event.head_commit.message }}'
           body: |
             ## Info
             Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
