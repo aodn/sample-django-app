@@ -34,13 +34,13 @@ variable "ecr_repository_url" {
   type        = string
 }
 
-variable "image" {
-  description = "The digest/tag of the docker image to pull from ECR"
+variable "environment" {
+  description = "Environment name to prepend/append to resource names"
   type        = string
 }
 
-variable "environment" {
-  description = "Environment name to prepend/append to resource names"
+variable "image" {
+  description = "The digest/tag of the docker image to pull from ECR"
   type        = string
 }
 
