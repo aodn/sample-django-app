@@ -79,7 +79,7 @@ jobs:
 
   production_deploy_apply:
     runs-on: ubuntu-latest
-    environment: staging
+    environment: production
     needs: [production_deploy_plan]
     steps:
       - name: Checkout
