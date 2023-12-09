@@ -10,7 +10,7 @@ permissions:
   contents: read    # This is required for actions/checkout
 
 jobs:
-  build_test_push:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,8 +34,8 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${{ vars.ECR_REPOSITORY }}:${{ github.ref }}
+          tags: ${{ vars.ECR_REPOSITORY }}
 
       - name: Test Docker Image
         run: |
-          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:${{ github.ref }} --config tests/config.yaml
+          container-structure-test test --image ${{ vars.ECR_REPOSITORY }} --config tests/config.yaml
