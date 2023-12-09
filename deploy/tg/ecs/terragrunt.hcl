@@ -23,18 +23,18 @@ inputs = {
   app_hostnames = ["api-${local.global.environment}"]
 
   # get docker environment variable values with default fallback values
-  allowed_hosts          = get_env("ALLOWED_HOSTS", "*")
-  allowed_cidr_nets      = get_env("ALLOWED_CIDR_NETS", "")
-  django_secret_key      = get_env("DJANGO_SECRET_KEY", "changeme")
-  db_host                = get_env("DB_HOST", "")
-  db_name                = get_env("DB_NAME", "api")
-  db_user                = get_env("DB_USER", "api")
-  db_secret_name         = get_env("DB_SECRET_NAME", "/rds/stefan-db/primary/evaluation/api")
-  db_secret_region       = get_env("DB_SECRET_REGION", "ap-southeast-2")
+  allowed_hosts     = get_env("ALLOWED_HOSTS", "*")
+  allowed_cidr_nets = get_env("ALLOWED_CIDR_NETS", "")
+  django_secret_key = get_env("DJANGO_SECRET_KEY", "changeme")
+  db_host           = get_env("DB_HOST", "")
+  db_name           = get_env("DB_NAME", "api")
+  db_user           = get_env("DB_USER", "api")
+  db_secret_name    = get_env("DB_SECRET_NAME", "/rds/stefan-db/primary/evaluation/api")
+  db_secret_region  = get_env("DB_SECRET_REGION", "ap-southeast-2")
   s3_storage_bucket_name = get_env("S3_STORAGE_BUCKET_NAME",
-    dependency.s3.outputs.wrapper["sample-django-app-${local.global.environment}-${local.global.aws_account}"].s3_bucket_id)
+  dependency.s3.outputs.wrapper["sample-django-app-${local.global.environment}-${local.global.aws_account}"].s3_bucket_id)
   s3_storage_bucket_region = get_env("S3_STORAGE_BUCKET_REGION",
-    dependency.s3.outputs.wrapper["sample-django-app-${local.global.environment}-${local.global.aws_account}"].s3_bucket_region)
+  dependency.s3.outputs.wrapper["sample-django-app-${local.global.environment}-${local.global.aws_account}"].s3_bucket_region)
 }
 
 locals {
