@@ -101,7 +101,7 @@ jobs:
       - name: Set Image Digest from Metadata
         id: set_image_digest
         run: |
-          image_digest=$(cat /tmp/metadata.json | jq -r '."containerimage.digest"')
+          image_digest=$(cat metadata.json | jq -r '."containerimage.digest"')
           echo "image_digest=$image_digest" >> $GITHUB_OUTPUT
 
       - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
