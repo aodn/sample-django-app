@@ -13,6 +13,11 @@ variable "alb_zone_id" {
   type        = string
 }
 
+variable "app_name" {
+  description = "The name of the application e.g. sample-django-app"
+  type        = string
+}
+
 variable "app_hostnames" {
   description = "Hostnames to associate with the application"
   type        = list(string)

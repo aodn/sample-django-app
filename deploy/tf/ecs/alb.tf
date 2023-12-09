@@ -1,5 +1,5 @@
 resource "aws_lb_target_group" "app" {
-  name        = "sample-django-app"
+  name        = "${var.app_name}-${var.environment}"
   port        = 80
   protocol    = "HTTP"
   target_type = "ip"
