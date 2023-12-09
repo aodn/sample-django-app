@@ -1,0 +1,203 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
+
+jobs:
+  build_test_push:
+    runs-on: ubuntu-latest
+    environment: staging
+    outputs:
+      image_digest: ${{ steps.build_and_push.outputs.digest }}
+      image_metadata: ${{ steps.build_and_push.outputs.metadata }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Setup Docker Structure Test
+        run: >
+          curl -LO
+          https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
+          && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
+          /usr/local/bin/container-structure-test
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ env.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Login to ECR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.ECR_REGISTRY }}
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ vars.ECR_REPOSITORY }}:latest
+
+      - name: Test Docker Image
+        run: |
+          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:latest --config tests/config.yaml
+
+      - name: Build and Push Docker Image
+        id: build_and_push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+#          Only building for AMD64 for now
+#          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
+
+  staging_deploy_plan:
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: build_test_push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
+        env:
+          deploy_path: ./deploy/tg/ecs
+          environment: ${{ vars.ENVIRONMENT }}
+        run: |
+          params=( apps/alb/${{ vars.ALB }} apps/ecr/${{ vars.ECR_REPOSITORY }} core rds/${{ vars.RDS_DB }} )
+          for param in ${params[@]}; do
+            filename="$environment.${param//\//-}.auto.tfvars.json"
+            aws ssm get-parameters-by-path \
+              --path "/$param/" \
+              --recursive \
+              --output json \
+              --query 'Parameters[*]' \
+              | jq '. |= map({ (.Name | split("/")[-1]): .Value }) | add' \
+              > "$deploy_path/$filename"
+          done
+
+      - name: Expose github environment as shell variables
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
+          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
+          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
+
+      - name: Terragrunt Plan
+        id: terragrunt_plan
+        uses: gruntwork-io/terragrunt-action@v2.0.0
+        with:
+          tf_version: '1.5.7'
+          tg_version: '0.51.0'
+          tg_dir: './deploy/tg'
+          tg_command: 'run-all plan'
+        env:
+          TF_INPUT: 0
+          TF_IN_AUTOMATION: true
+          # get the image digest from the build job with optional override from vars context
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
+
+  staging_deploy_apply:
+    runs-on: ubuntu-latest
+    environment: staging
+    needs: [staging_deploy_plan, build_test_push]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
+      - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
+        env:
+          deploy_path: ./deploy/tg/ecs
+          environment: ${{ vars.ENVIRONMENT }}
+        run: |
+          params=( apps/alb/${{ vars.ALB }} apps/ecr/${{ vars.ECR_REPOSITORY }} core rds/${{ vars.RDS_DB }} )
+          for param in ${params[@]}; do
+            filename="$environment.${param//\//-}.auto.tfvars.json"
+            aws ssm get-parameters-by-path \
+              --path "/$param/" \
+              --recursive \
+              --output json \
+              --query 'Parameters[*]' \
+              | jq '. |= map({ (.Name | split("/")[-1]): .Value }) | add' \
+              > "$deploy_path/$filename"
+          done
+
+      - name: Expose github environment as shell variables
+        env:
+          SECRETS_CONTEXT: ${{ toJson(secrets) }}
+          VARS_CONTEXT: ${{ toJson(vars) }}
+        run: |
+          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
+          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
+          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
+
+      - name: Terragrunt Apply
+        id: terragrunt_plan
+        uses: gruntwork-io/terragrunt-action@v2.0.0
+        with:
+          tf_version: '1.5.7'
+          tg_version: '0.51.0'
+          tg_dir: './deploy/tg'
+          tg_command: 'run-all apply'
+        env:
+          TF_INPUT: 0
+          TF_IN_AUTOMATION: true
+          # get the image digest from the build job with optional override from vars context
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
+
+  create_release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build_test_push]
+    steps:
+      - name: Write image metadata to file
+        id: metadata_to_file
+        run: ${{ needs.build_test_push.outputs.image_metadata }} > metadata.json
+      - name: Create Draft Release
+        id: create_draft_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Draft Release ${{ github.ref }}
+          body: |
+            ## Info
+            Commit ${{ github.sha }} was deployed to `staging`. [See code diff](${{ github.event.compare }}).
+
+            It was initialized by [${{ github.event.sender.login }}](${{ github.event.sender.html_url }}).
+
+            ## How to Promote?
+            In order to promote this to prod, edit the draft and press **"Publish release"**.
+          draft: true
+          files: metadata.json
