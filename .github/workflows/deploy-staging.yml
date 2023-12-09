@@ -182,6 +182,8 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest
     needs: [build_test_push, staging_deploy_apply]
+    permissions:
+      contents: write
     steps:
       - name: Write image metadata to file
         id: metadata_to_file
