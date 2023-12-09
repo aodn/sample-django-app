@@ -185,7 +185,7 @@ jobs:
     steps:
       - name: Write image metadata to file
         id: metadata_to_file
-        run: echo ${{ needs.build_test_push.outputs.image_metadata }} > metadata.json
+        run: echo '${{ needs.build_test_push.outputs.image_metadata }}' > metadata.json
 
       - name: Create Draft Release
         id: create_draft_release
