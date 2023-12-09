@@ -62,6 +62,9 @@ module "ecs" {
       cpu    = 512
       memory = 1024
 
+      # wait for service to reach steady state
+      wait_for_steady_state = true
+
       # Container definition(s)
       container_definitions = {
         api = {
