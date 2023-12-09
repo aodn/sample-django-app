@@ -25,7 +25,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Get Image Metadata from Release
-        uses: dsaltares/fetch-gh-release-asset@v1.1.1
+        uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: ${{ github.event.release.id }}
           file: metadata.json
@@ -93,7 +93,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Get Image Metadata from Release
-        uses: dsaltares/fetch-gh-release-asset@v1.1.1
+        uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: ${{ github.event.release.id }}
           file: metadata.json
