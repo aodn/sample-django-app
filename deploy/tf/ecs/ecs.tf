@@ -1,9 +1,9 @@
 locals {
   # set container definition variables with default fallback values from ssm if available
   allowed_hosts            = var.allowed_hosts
-  allowed_cidr_nets        = coalesce(var.allowed_cidr_nets, var.subnets_private_cidr)
+  allowed_cidr_nets        = coalesce(var.allowed_cidr_nets, local.private_subnet_cidrs)
   django_secret_key        = var.django_secret_key
-  db_host                  = coalesce(var.db_host, var.rds_url)
+  db_host                  = coalesce(var.db_host, local.rds_url)
   db_name                  = var.db_name
   db_user                  = var.db_user
   db_secret_name           = var.db_secret_name
@@ -11,7 +11,7 @@ locals {
   s3_storage_bucket_name   = var.s3_storage_bucket_name
   s3_storage_bucket_region = var.s3_storage_bucket_region
 
-  ecr_registry = split("/", var.ecr_repository_url)[0]
+  ecr_registry = split("/", local.ecr_repository_url)[0]
 }
 
 module "ecs" {
@@ -69,7 +69,7 @@ module "ecs" {
       container_definitions = {
         api = {
           name  = "api"
-          image = startswith(var.image, "sha256") ? "${var.ecr_repository_url}@${var.image}" : "${var.ecr_repository_url}:${var.image}"
+          image = startswith(var.image, "sha256") ? "${local.ecr_repository_url}@${var.image}" : "${local.ecr_repository_url}:${var.image}"
           health_check = {
             command = ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
           }
@@ -147,7 +147,7 @@ module "ecs" {
         }
       }
 
-      subnet_ids = split(",", var.subnets_private)
+      subnet_ids = local.private_subnets
 
       security_group_rules = {
         ingress_vpc = {
@@ -155,7 +155,7 @@ module "ecs" {
           from_port   = var.container_port
           to_port     = var.container_port
           protocol    = "tcp"
-          cidr_blocks = [var.vpc_cidr]
+          cidr_blocks = [local.vpc_cidr]
         }
         egress_all = {
           type        = "egress"
