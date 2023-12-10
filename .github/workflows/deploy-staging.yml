@@ -105,9 +105,9 @@ jobs:
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
           # set the parameter name variables
-          TF_VAR_alb_parameter_name: $ALB_PARAMETER_NAME
+          TF_VAR_alb_parameter_name: ${{ env.ALB_PARAMETER_NAME }}
           TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
-          TF_VAR_rds_parameter_name: $RDS_PARAMETER_NAME
+          TF_VAR_rds_parameter_name: ${{ env.RDS_PARAMETER_NAME }}
 
   staging_deploy_apply:
     runs-on: ubuntu-latest
@@ -148,9 +148,9 @@ jobs:
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
           # set the parameter name variables
-          TF_VAR_alb_parameter_name: $ALB_PARAMETER_NAME
+          TF_VAR_alb_parameter_name: ${{ env.ALB_PARAMETER_NAME }}
           TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
-          TF_VAR_rds_parameter_name: $RDS_PARAMETER_NAME
+          TF_VAR_rds_parameter_name: ${{ env.RDS_PARAMETER_NAME }}
 
   create_draft_release:
     name: Create Release
