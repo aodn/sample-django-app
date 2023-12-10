@@ -81,23 +81,6 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
-        env:
-          deploy_path: ./deploy/tg/ecs
-          environment: ${{ vars.ENVIRONMENT }}
-        run: |
-          params=( apps/alb/${{ vars.ALB }} apps/ecr/${{ vars.ECR_REPOSITORY }} core rds/${{ vars.RDS_DB }} )
-          for param in ${params[@]}; do
-            filename="$environment.${param//\//-}.auto.tfvars.json"
-            aws ssm get-parameters-by-path \
-              --path "/$param/" \
-              --recursive \
-              --output json \
-              --query 'Parameters[*]' \
-              | jq '. |= map({ (.Name | split("/")[-1]): .Value }) | add' \
-              > "$deploy_path/$filename"
-          done
-
       - name: Expose github environment as shell variables
         env:
           SECRETS_CONTEXT: ${{ toJson(secrets) }}
@@ -121,6 +104,10 @@ jobs:
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
+          # set the parameter name variables
+          TF_VAR_alb_parameter_name: $ALB_PARAMETER_NAME
+          TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
+          TF_VAR_rds_parameter_name: $RDS_PARAMETER_NAME
 
   staging_deploy_apply:
     runs-on: ubuntu-latest
@@ -136,23 +123,6 @@ jobs:
           audience: sts.amazonaws.com
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Export shared infrastructure SSM parameter values to auto.tfvars.json files
-        env:
-          deploy_path: ./deploy/tg/ecs
-          environment: ${{ vars.ENVIRONMENT }}
-        run: |
-          params=( apps/alb/${{ vars.ALB }} apps/ecr/${{ vars.ECR_REPOSITORY }} core rds/${{ vars.RDS_DB }} )
-          for param in ${params[@]}; do
-            filename="$environment.${param//\//-}.auto.tfvars.json"
-            aws ssm get-parameters-by-path \
-              --path "/$param/" \
-              --recursive \
-              --output json \
-              --query 'Parameters[*]' \
-              | jq '. |= map({ (.Name | split("/")[-1]): .Value }) | add' \
-              > "$deploy_path/$filename"
-          done
 
       - name: Expose github environment as shell variables
         env:
@@ -177,6 +147,10 @@ jobs:
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
+          # set the parameter name variables
+          TF_VAR_alb_parameter_name: $ALB_PARAMETER_NAME
+          TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
+          TF_VAR_rds_parameter_name: $RDS_PARAMETER_NAME
 
   create_draft_release:
     name: Create Release
