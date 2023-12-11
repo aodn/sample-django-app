@@ -20,6 +20,11 @@ inputs = {
   app_name    = get_env("APP_NAME")
   environment = local.global.environment
 
+  # fetch the ssm parameter names
+  alb_parameter_name = get_env("ALB_PARAMETER_NAME")
+  ecr_parameter_name = get_env("ECR_PARAMETER_NAME")
+  rds_parameter_name = get_env("RDS_PARAMETER_NAME")
+
   # DNS hostnames to associate with the container
   app_hostnames = ["api-${local.global.environment}"]
 
