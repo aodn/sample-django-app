@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The branch/tag/sha to deploy from
+        required: true
+        type: string
 
 permissions:
   id-token: write
@@ -19,6 +25,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -48,9 +56,13 @@ jobs:
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
 
-  staging_deploy_plan:
+  staging_deploy:
     runs-on: ubuntu-latest
     environment: staging
+    env:
+      tf_version: '1.5.7'
+      tg_version: '0.51.0'
+      tg_dir: './deploy/tg'
     needs: build_test_push
     steps:
       - name: Checkout
@@ -77,49 +89,24 @@ jobs:
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
-          tf_version: '1.5.7'
-          tg_version: '0.51.0'
-          tg_dir: './deploy/tg'
-          tg_command: 'run-all plan'
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.tg_dir }}
+          tg_command: 'run-all plan -out=tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
-  staging_deploy_apply:
-    runs-on: ubuntu-latest
-    environment: staging
-    needs: [staging_deploy_plan, build_test_push]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          audience: sts.amazonaws.com
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Expose github environment as shell variables
-        env:
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
-        run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
-          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
-          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
-
       - name: Terragrunt Apply
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
-          tf_version: '1.5.7'
-          tg_version: '0.51.0'
-          tg_dir: './deploy/tg'
-          tg_command: 'run-all apply'
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.tg_dir }}
+          tg_command: 'run-all apply tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
@@ -129,7 +116,7 @@ jobs:
   create_draft_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build_test_push, staging_deploy_apply]
+    needs: [build_test_push]
     permissions:
       contents: write
     steps:
