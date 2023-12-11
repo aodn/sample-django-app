@@ -100,7 +100,7 @@ jobs:
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
       - name: Terragrunt Apply
-        id: terragrunt_plan
+        id: terragrunt_apply
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
           tf_version: ${{ env.tf_version }}
