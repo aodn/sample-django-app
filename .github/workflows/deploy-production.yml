@@ -71,6 +71,7 @@ jobs:
         run: terragrunt plan -out=tf.plan
         working-directory: ${{ env.tg_dir }}
         env:
+          TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
@@ -80,6 +81,7 @@ jobs:
         run: terragrunt apply -auto-approve tf.plan
         working-directory: ${{ env.tg_dir }}
         env:
+          TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
