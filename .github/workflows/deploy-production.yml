@@ -1,21 +1,38 @@
-name: release
+name: Release
 
 on:
   release:
       types:
         - published
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: The branch/tag/sha to deploy from
+        required: true
+        type: string
+      image:
+        description: The docker image tag/digest to pull from ECR
+        required: true
+        type: string
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  production_deploy_plan:
+  production_deploy:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      tf_version: '1.5.7'
+      tg_version: '0.51.0'
+      tg_dir: './deploy/tg'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-tags: true
+          ref: ${{ inputs.ref || github.ref }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -25,12 +42,14 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
       - name: Get Image Metadata from Release
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         uses: dsaltares/fetch-gh-release-asset@master
         with:
           version: ${{ github.event.release.id }}
           file: metadata.json
 
       - name: Set Image Digest from Metadata
+        if: ${{ github.event_name != 'workflow_dispatch' }}
         id: set_image_digest
         run: |
           image_digest=$(cat metadata.json | jq -r '."containerimage.digest"')
@@ -50,63 +69,26 @@ jobs:
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
-          tf_version: '1.5.7'
-          tg_version: '0.51.0'
-          tg_dir: './deploy/tg'
-          tg_command: 'run-all plan'
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.tg_dir }}
+          tg_command: 'run-all plan -out=tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
-
-  production_deploy_apply:
-    runs-on: ubuntu-latest
-    environment: production
-    needs: [production_deploy_plan]
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          audience: sts.amazonaws.com
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
-
-      - name: Get Image Metadata from Release
-        uses: dsaltares/fetch-gh-release-asset@master
-        with:
-          version: ${{ github.event.release.id }}
-          file: metadata.json
-
-      - name: Set Image Digest from Metadata
-        id: set_image_digest
-        run: |
-          image_digest=$(cat metadata.json | jq -r '."containerimage.digest"')
-          echo "image_digest=$image_digest" >> $GITHUB_OUTPUT
-
-      - name: Expose github environment as shell variables
-        env:
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
-        run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
-          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
-          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
+          TF_VAR_image: ${{ vars.IMAGE || inputs.image || steps.set_image_digest.outputs.image_digest }}
 
       - name: Terragrunt Apply
         id: terragrunt_plan
         uses: gruntwork-io/terragrunt-action@v2.0.0
         with:
-          tf_version: '1.5.7'
-          tg_version: '0.51.0'
-          tg_dir: './deploy/tg'
-          tg_command: 'run-all apply'
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.tg_dir }}
+          tg_command: 'run-all apply tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || inputs.image || steps.set_image_digest.outputs.image_digest }}
