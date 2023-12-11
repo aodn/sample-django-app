@@ -13,7 +13,7 @@ permissions:
 jobs:
   build_push:
     runs-on: ubuntu-latest
-    environment: staging
+    environment: production
     outputs:
       image_digest: ${{ steps.build_and_push.outputs.digest }}
     steps:
