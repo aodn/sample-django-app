@@ -1,16 +1,22 @@
 locals {
   # set container definition variables with default fallback values from ssm if available
   app_vars = {
-    allowed_hosts            = var.allowed_hosts
-    allowed_cidr_nets        = coalesce(var.allowed_cidr_nets, local.private_subnet_cidrs)
-    django_secret_key        = var.django_secret_key
-    db_host                  = coalesce(var.db_host, local.rds_url)
-    db_name                  = var.db_name
-    db_user                  = var.db_user
-    db_secret_name           = var.db_secret_name
-    db_secret_region         = var.db_secret_region
-    s3_storage_bucket_name   = var.s3_storage_bucket_name
-    s3_storage_bucket_region = var.s3_storage_bucket_region
+    allowed_hosts     = var.allowed_hosts
+    allowed_cidr_nets = coalesce(var.allowed_cidr_nets, local.private_subnet_cidrs)
+    django_secret_key = var.django_secret_key
+    db_host           = coalesce(var.db_host, local.rds_url)
+    db_name           = var.db_name
+    db_user           = var.db_user
+    db_secret_name    = var.db_secret_name
+    db_secret_region  = var.db_secret_region
+    s3_storage_bucket_name = coalesce(
+      var.s3_storage_bucket_name,
+      "sample-django-app-${local.bucket_suffix}"
+    )
+    s3_storage_bucket_region = coalesce(
+      var.s3_storage_bucket_region,
+      data.aws_region.current.name
+    )
   }
 
   nginx_vars = {
@@ -27,6 +33,8 @@ locals {
 module "ecs" {
   source  = "terraform-aws-modules/ecs/aws"
   version = "~> 5.7.0"
+
+  depends_on = [module.s3.wrapper]
 
   # Cluster Configuration
   cluster_name = "${var.app_name}-${var.environment}"
