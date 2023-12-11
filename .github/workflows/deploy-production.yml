@@ -1,4 +1,4 @@
-name: Deploy to Production
+name: Deploy Production
 
 on:
   release:
@@ -16,7 +16,7 @@ jobs:
     environment: production
     env:
       tf_version: '1.5.7'
-      tg_version: '0.51.0'
+      tg_version: '0.54.0'
       tg_dir: './deploy/tg'
     steps:
       - name: Checkout
@@ -60,7 +60,6 @@ jobs:
           tg_dir: ${{ env.tg_dir }}
           tg_command: 'plan -out=tf.plan'
         env:
-          TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
@@ -72,9 +71,8 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'apply tf.plan'
+          tg_command: 'apply -auto-approve tf.plan'
         env:
-          TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}

@@ -1,4 +1,4 @@
-name: Deploy to Staging
+name: Deploy Staging
 
 on:
   push:
@@ -54,7 +54,7 @@ jobs:
     environment: staging
     env:
       tf_version: '1.5.7'
-      tg_version: '0.51.0'
+      tg_version: '0.54.0'
       tg_dir: './deploy/tg'
     needs: build_test_push
     steps:
@@ -99,9 +99,8 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'apply tf.plan'
+          tg_command: 'apply -auto-approve tf.plan'
         env:
-          TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
