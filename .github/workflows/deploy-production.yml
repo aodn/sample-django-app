@@ -58,7 +58,7 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run plan -out=tf.plan'
+          tg_command: 'plan -out=tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
@@ -72,7 +72,7 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run apply tf.plan'
+          tg_command: 'apply tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true

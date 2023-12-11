@@ -85,7 +85,7 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run plan -out=tf.plan'
+          tg_command: 'plan -out=tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
@@ -99,7 +99,7 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run apply tf.plan'
+          tg_command: 'apply tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
@@ -109,7 +109,7 @@ jobs:
   create_draft_release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build_test_push]
+    needs: [build_test_push, staging_deploy]
     permissions:
       contents: write
     steps:
@@ -121,7 +121,7 @@ jobs:
         id: create_draft_release
         uses: softprops/action-gh-release@v1
         with:
-          name: Draft Release - commit '${{ github.sha }}'
+          name: Draft Release - commit ${{ github.sha }}
           body: |
             ## Info
             This draft release has been automatically created from merge commit '${{ github.event.head_commit.message }}'.
