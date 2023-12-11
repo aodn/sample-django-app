@@ -5,11 +5,6 @@ on:
     branches:
       - master
   workflow_dispatch:
-    inputs:
-      ref:
-        description: The branch/tag/sha to deploy from
-        required: true
-        type: string
 
 permissions:
   id-token: write
@@ -25,8 +20,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref || github.ref }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -92,7 +85,7 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run-all plan -out=tf.plan'
+          tg_command: 'run-all plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
@@ -106,7 +99,7 @@ jobs:
           tf_version: ${{ env.tf_version }}
           tg_version: ${{ env.tg_version }}
           tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run-all apply tf.plan'
+          tg_command: 'run-all apply'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
