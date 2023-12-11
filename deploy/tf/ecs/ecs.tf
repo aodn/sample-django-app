@@ -1,17 +1,27 @@
 locals {
   # set container definition variables with default fallback values from ssm if available
-  allowed_hosts            = var.allowed_hosts
-  allowed_cidr_nets        = coalesce(var.allowed_cidr_nets, local.private_subnet_cidrs)
-  django_secret_key        = var.django_secret_key
-  db_host                  = coalesce(var.db_host, local.rds_url)
-  db_name                  = var.db_name
-  db_user                  = var.db_user
-  db_secret_name           = var.db_secret_name
-  db_secret_region         = var.db_secret_region
-  s3_storage_bucket_name   = var.s3_storage_bucket_name
-  s3_storage_bucket_region = var.s3_storage_bucket_region
+  app_vars = {
+    allowed_hosts            = var.allowed_hosts
+    allowed_cidr_nets        = coalesce(var.allowed_cidr_nets, local.private_subnet_cidrs)
+    django_secret_key        = var.django_secret_key
+    db_host                  = coalesce(var.db_host, local.rds_url)
+    db_name                  = var.db_name
+    db_user                  = var.db_user
+    db_secret_name           = var.db_secret_name
+    db_secret_region         = var.db_secret_region
+    s3_storage_bucket_name   = var.s3_storage_bucket_name
+    s3_storage_bucket_region = var.s3_storage_bucket_region
+  }
 
-  ecr_registry = split("/", local.ecr_repository_url)[0]
+  nginx_vars = {
+    app_host    = "127.0.0.1"
+    app_port    = 9000
+    listen_port = var.container_port
+  }
+
+  app_container_vars   = [for k, v in local.app_vars : { name = upper(k), value = v }]
+  nginx_container_vars = [for k, v in local.nginx_vars : { name = upper(k), value = v }]
+  ecr_registry         = split("/", local.ecr_repository_url)[0]
 }
 
 module "ecs" {
@@ -67,8 +77,8 @@ module "ecs" {
 
       # Container definition(s)
       container_definitions = {
-        api = {
-          name  = "api"
+        app = {
+          name  = var.container_name
           image = startswith(var.image, "sha256") ? "${local.ecr_repository_url}@${var.image}" : "${local.ecr_repository_url}:${var.image}"
           health_check = {
             command = ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
@@ -76,21 +86,10 @@ module "ecs" {
           readonly_root_filesystem = false
           essential                = true
           memory_reservation       = 256
-          environment = [
-            { name = "ALLOWED_HOSTS", value = local.allowed_hosts },
-            { name = "ALLOWED_CIDR_NETS", value = local.allowed_cidr_nets },
-            { name = "DJANGO_SECRET_KEY", value = local.django_secret_key },
-            { name = "DB_HOST", value = local.db_host },
-            { name = "DB_NAME", value = local.db_name },
-            { name = "DB_USER", value = local.db_user },
-            { name = "DB_SECRET_NAME", value = local.db_secret_name },
-            { name = "DB_SECRET_REGION", value = local.db_secret_region },
-            { name = "S3_STORAGE_BUCKET_NAME", value = local.s3_storage_bucket_name },
-            { name = "S3_STORAGE_BUCKET_REGION", value = local.s3_storage_bucket_region }
-          ]
+          environment              = local.app_container_vars
           port_mappings = [
             {
-              name          = "api"
+              name          = var.container_name
               containerPort = 9000
               hostPort      = 9000
             }
@@ -103,8 +102,8 @@ module "ecs" {
             }
           ]
         }
-        proxy = {
-          name  = "proxy"
+        nginx = {
+          name  = "nginx"
           image = "${local.ecr_registry}/nginx-proxy:latest"
           health_check = {
             command = ["CMD-SHELL", "curl -so /dev/null http://localhost/health || exit 1"]
@@ -112,11 +111,7 @@ module "ecs" {
           readonly_root_filesystem = false
           essential                = true
           memory_reservation       = 256
-          environment = [
-            { name = "APP_HOST", value = "127.0.0.1" },
-            { name = "APP_PORT", value = 9000 },
-            { name = "LISTEN_PORT", value = var.container_port }
-          ]
+          environment              = local.nginx_container_vars
           port_mappings = [
             {
               name          = "nginx"
@@ -142,7 +137,7 @@ module "ecs" {
       load_balancer = {
         service = {
           target_group_arn = aws_lb_target_group.app.arn
-          container_name   = "proxy"
+          container_name   = "nginx"
           container_port   = var.container_port
         }
       }

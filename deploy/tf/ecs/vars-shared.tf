@@ -25,6 +25,12 @@ variable "app_hostnames" {
   type        = list(string)
 }
 
+variable "container_name" {
+  description = "The name of the primary application container"
+  type        = string
+  default     = "app"
+}
+
 variable "container_port" {
   description = "The port to expose to the load balancer on the container"
   type        = number

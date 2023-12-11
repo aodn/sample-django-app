@@ -6,8 +6,8 @@ on:
         - published
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
-  contents: read    # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   production_deploy_plan:
@@ -59,10 +59,6 @@ jobs:
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
-          # set the parameter name variables
-          TF_VAR_alb_parameter_name: ${{ env.ALB_PARAMETER_NAME }}
-          TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
-          TF_VAR_rds_parameter_name: ${{ env.RDS_PARAMETER_NAME }}
 
   production_deploy_apply:
     runs-on: ubuntu-latest
@@ -114,7 +110,3 @@ jobs:
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || steps.set_image_digest.outputs.image_digest }}
-          # set the parameter name variables
-          TF_VAR_alb_parameter_name: ${{ env.ALB_PARAMETER_NAME }}
-          TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
-          TF_VAR_rds_parameter_name: ${{ env.RDS_PARAMETER_NAME }}

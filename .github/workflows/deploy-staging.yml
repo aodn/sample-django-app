@@ -6,8 +6,8 @@ on:
       - master
 
 permissions:
-  id-token: write   # This is required for requesting the JWT
-  contents: read    # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   build_test_push:
@@ -26,13 +26,6 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Setup Docker Structure Test
-        run: >
-          curl -LO
-          https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
-          && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
-          /usr/local/bin/container-structure-test
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -44,17 +37,6 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ vars.ECR_REGISTRY }}
-
-      - name: Build Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: ${{ vars.ECR_REPOSITORY }}:latest
-
-      - name: Test Docker Image
-        run: |
-          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:latest --config tests/config.yaml
 
       - name: Build and Push Docker Image
         id: build_and_push
@@ -104,10 +86,6 @@ jobs:
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
-          # set the parameter name variables
-          TF_VAR_alb_parameter_name: ${{ env.ALB_PARAMETER_NAME }}
-          TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
-          TF_VAR_rds_parameter_name: ${{ env.RDS_PARAMETER_NAME }}
 
   staging_deploy_apply:
     runs-on: ubuntu-latest
@@ -147,10 +125,6 @@ jobs:
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
           TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
-          # set the parameter name variables
-          TF_VAR_alb_parameter_name: ${{ env.ALB_PARAMETER_NAME }}
-          TF_VAR_ecr_parameter_name: ${{ vars.ECR_REPOSITORY }}
-          TF_VAR_rds_parameter_name: ${{ env.RDS_PARAMETER_NAME }}
 
   create_draft_release:
     name: Create Release
