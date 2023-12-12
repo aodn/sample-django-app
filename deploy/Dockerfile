@@ -1,8 +1,9 @@
+ARG TF_VERSION=1.5.7
+
 FROM hashicorp/terraform:$TF_VERSION
 
 LABEL maintainer="devops@aodn.org.au"
 
-ARG TF_VERSION=1.5.7
 ARG TG_VERSION=0.54.0
 ARG USER_ID=1000
 ARG GROUP_ID=1000
