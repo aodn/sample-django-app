@@ -17,7 +17,7 @@ Manually updating vars can be tedious and error-prone. Instead, you may define t
 gh variable set -R aodn/sample-django-app -e staging -f staging.env
 ```
 
-### Deploying Locally
+### Deploying From the CLI
 The Terragrunt module for this application depends on variables being present and will fail if they are not.
 
 To test locally, you may want to populate these into your local environment using the following command:
@@ -44,10 +44,10 @@ ECR_REGISTRY=123456789012.dkr.ecr.ap-southeast-2.amazonaws.com
 ECR_REPOSITORY=api
 ENVIRONMENT=mydev-stack
 RDS_PARAMETER_NAME=db01/primary/development
-
 ```
 
 ```bash
+export AWS_PROFILE=myprofile
 cd deploy
 docker-compose -f docker-compose.yml run terragrunt
 ```
@@ -55,7 +55,6 @@ docker-compose -f docker-compose.yml run terragrunt
 On the container run the following:
 ```bash
 set -a; source ./github/dev.env; set +a
-terragrunt plan -out=tf.plan
-terragrunt apply -auto-approve tf.plan
-
+TF_VAR_image=latest terragrunt plan -out=tf.plan
+TF_VAR_image=latest terragrunt apply -auto-approve tf.plan
 ```
