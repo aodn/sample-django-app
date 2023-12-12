@@ -36,35 +36,35 @@ data "aws_ssm_parameter" "alb_zone_id" {
 
 # core parameters
 data "aws_ssm_parameter" "vpc_id" {
-  name = "/core/vpc/vpc_id"
+  name = "/core/vpc_id"
 }
 
 data "aws_ssm_parameter" "vpc_cidr" {
-  name = "/core/vpc/vpc_cidr"
+  name = "/core/vpc_cidr"
 }
 
 data "aws_ssm_parameter" "public_subnets" {
-  name = "/core/vpc/subnets_public"
+  name = "/core/subnets_public"
 }
 
 data "aws_ssm_parameter" "public_subnet_cidrs" {
-  name = "/core/vpc/subnets_public_cidr"
+  name = "/core/subnets_public_cidr"
 }
 
 data "aws_ssm_parameter" "private_subnets" {
-  name = "/core/vpc/subnets_private"
+  name = "/core/subnets_private"
 }
 
 data "aws_ssm_parameter" "private_subnet_cidrs" {
-  name = "/core/vpc/subnets_private_cidr"
+  name = "/core/subnets_private_cidr"
 }
 
 data "aws_ssm_parameter" "zonename" {
-  name = "/core/dnszone/zone_domain"
+  name = "/core/zone_domain"
 }
 
 data "aws_ssm_parameter" "zoneid" {
-  name = "/core/dnszone/zone_id"
+  name = "/core/zone_id"
 }
 
 # ecr parameters
@@ -74,5 +74,5 @@ data "aws_ssm_parameter" "ecr_repository_url" {
 
 # rds parameters
 data "aws_ssm_parameter" "rds_url" {
-  name = "/rds/${var.rds_parameter_name}/rds_url"
+  name = "/rds/${var.rds_parameter_name}/endpoint"
 }
