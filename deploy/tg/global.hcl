@@ -20,7 +20,7 @@ provider "aws" {
       "ManagedBy" = "Apps - ${local.state_bucket}/${local.state_key}"
       "Owner" = "Platform Engineering"
       "Project" = "AODN Applications"
-      "Repository" = "aodn/sample-django-app"
+      "Repository" = "aodn/${local.project_name}"
     }
   }
 }
@@ -47,5 +47,5 @@ remote_state {
 }
 
 terraform {
-  source = "${get_repo_root()}//deploy/tf"
+  source = "..//tf"
 }
