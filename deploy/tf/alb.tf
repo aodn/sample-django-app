@@ -1,6 +1,6 @@
 resource "aws_lb_target_group" "app" {
   name        = "${var.app_name}-${var.environment}"
-  port        = 80
+  port        = var.nginx_proxy ? var.proxy_port : var.app_port
   protocol    = "HTTP"
   target_type = "ip"
   vpc_id      = local.vpc_id

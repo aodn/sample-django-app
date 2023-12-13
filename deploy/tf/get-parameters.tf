@@ -13,12 +13,6 @@ locals {
   public_subnet_cidrs  = nonsensitive(data.aws_ssm_parameter.public_subnet_cidrs.value)
   private_subnets      = split(",", nonsensitive(data.aws_ssm_parameter.private_subnets.value))
   private_subnet_cidrs = nonsensitive(data.aws_ssm_parameter.private_subnet_cidrs.value)
-
-  # ecr values
-  ecr_repository_url = nonsensitive(data.aws_ssm_parameter.ecr_repository_url.value)
-
-  # rds values
-  rds_url = nonsensitive(data.aws_ssm_parameter.rds_url.value)
 }
 
 # alb parameters
@@ -65,14 +59,4 @@ data "aws_ssm_parameter" "zonename" {
 
 data "aws_ssm_parameter" "zoneid" {
   name = "/core/zone_id"
-}
-
-# ecr parameters
-data "aws_ssm_parameter" "ecr_repository_url" {
-  name = "/apps/ecr/${var.ecr_parameter_name}/ecr_repository_url"
-}
-
-# rds parameters
-data "aws_ssm_parameter" "rds_url" {
-  name = "/rds/${var.rds_parameter_name}/endpoint"
 }
