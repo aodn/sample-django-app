@@ -1,21 +1,20 @@
-name: Deploy Production
+name: Build, Test and Deploy Development
 
 on:
-  release:
-      types:
-        - published
-  workflow_dispatch:
+  pull_request:
+    branches:
+      - master
 
 permissions:
-  id-token: write
-  contents: read
+  id-token: write   # This is required for requesting the JWT
+  contents: read    # This is required for actions/checkout
 
 jobs:
-  build_push:
+  build_test_push:
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
     outputs:
-      image_digest: ${{ steps.build_and_push.outputs.digest }}
+      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +24,34 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Setup Docker Structure Test
+        run: >
+          curl -LO
+          https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
+          && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
+          /usr/local/bin/container-structure-test
+
+      - name: Set Image Tag
+        id: set_image_tag
+        run: |
+          branch_name=${{ github.head_ref || github.ref_name }}
+          tag=${{ env.TAG_PREFIX}}-${branch_name//\//-}
+          echo "$tag"
+          echo "image_tag=$tag" >> $GITHUB_OUTPUT
+        env:
+          TAG_PREFIX: dev
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }}
+
+      - name: Test Docker Image
+        run: |
+          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }} --config tests/config.yaml
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,12 +65,6 @@ jobs:
         with:
           registry: ${{ vars.ECR_REGISTRY }}
 
-      - name: Set Image Tag
-        id: set_image_tag
-        run: |
-          tag=${{ github.ref_name }}
-          echo "image_tag=${tag//\v/}" >> $GITHUB_OUTPUT
-
       - name: Build and Push Docker Image
         id: build_and_push
         uses: docker/build-push-action@v5
@@ -54,14 +75,14 @@ jobs:
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }}
 
-  production_deploy:
+  development_deploy:
     runs-on: ubuntu-latest
-    environment: production
+    environment: development
     env:
       tf_version: '1.5.7'
       tg_version: '0.54.0'
       tg_dir: './deploy/tg'
-    needs: [build_push]
+    needs: [build_test_push]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -94,7 +115,7 @@ jobs:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_tag }}
 
       - name: Terragrunt Apply
         uses: gruntwork-io/terragrunt-action@v2
@@ -107,4 +128,4 @@ jobs:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_tag }}
