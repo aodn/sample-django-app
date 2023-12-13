@@ -30,8 +30,19 @@ variable "container_vars" {
   type        = map(any)
 }
 
+variable "cpu" {
+  description = "The CPU capacity to allocate to the task."
+  type        = number
+  default     = 512
+}
+
 variable "ecr_registry" {
   description = "The registry to pull docker images from."
+  type        = string
+}
+
+variable "ecr_repository" {
+  description = "The repository to pull the image from."
   type        = string
 }
 
@@ -43,6 +54,12 @@ variable "environment" {
 variable "image" {
   description = "The digest/tag of the docker image to pull from ECR"
   type        = string
+}
+
+variable "memory" {
+  description = "The CPU capacity to allocate to the task."
+  type        = number
+  default     = 1024
 }
 
 variable "nginx_proxy" {

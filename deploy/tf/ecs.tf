@@ -11,8 +11,12 @@ locals {
   container_definitions = var.nginx_proxy ? merge(local.app_container_definition, local.nginx_container_definition) : local.app_container_definition
   app_container_definition = {
     app = {
-      name  = var.app_container_name
-      image = startswith(var.image, "sha256") ? "${var.ecr_registry}@${var.image}" : "${var.ecr_registry}:${var.image}"
+      name = var.app_container_name
+      image = (
+        startswith(var.image, "sha256") ?
+        "${var.ecr_registry}/${var.ecr_repository}@${var.image}" :
+        "${var.ecr_registry}/${var.ecr_repository}:${var.image}"
+      )
       health_check = {
         command = ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
       }
@@ -96,24 +100,22 @@ module "ecs" {
 
     "${var.app_name}-${var.environment}" = {
       capacity_provider_strategy = {
-        dedicated = {
+        env_strategy = {
           base              = 0
-          capacity_provider = "FARGATE"
+          capacity_provider = var.environment == "production" ? "FARGATE" : "FARGATE_SPOT"
           weight            = 100
         }
-        #        spot = {
-        #          base              = 0
-        #          capacity_provider = "FARGATE_SPOT"
-        #          weight            = 100
-        #        }
       }
 
       # allow ECS exec commands on containers (e.g. to get a shell session)
       enable_execute_command = true
 
       # resources
-      cpu    = 512
-      memory = 1024
+      cpu    = var.cpu
+      memory = var.memory
+
+      # do not force a new deployment unless the image digest has changed
+      force_new_deployment = false
 
       # wait for service to reach steady state
       wait_for_steady_state = true
