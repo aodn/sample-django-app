@@ -177,6 +177,12 @@ module "ecs" {
         }
       ]
 
+      timeouts = {
+        create = "10m"
+        update = "5m"
+        delete = "10m"
+      }
+
       volume = {
         static = {}
       }
