@@ -83,25 +83,13 @@ jobs:
           echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
           echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.tf_version }}
-
-      - name: Setup Terragrunt
-        id: setup_terragrunt
-        run: |
-          wget https://github.com/gruntwork-io/terragrunt/releases/download/v${terragrunt_version}/terragrunt_linux_amd64 \
-            && mv terragrunt_linux_amd64 terragrunt \
-            && chmod +x terragrunt \
-            && mv terragrunt /usr/local/bin/terragrunt
-        env:
-          terragrunt_version: ${{ env.tg_version }}
-
       - name: Terragrunt Plan
-        id: terragrunt_plan
-        run: terragrunt plan -out=tf.plan
-        working-directory: ${{ env.tg_dir }}
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.tg_dir }}
+          tg_command: 'plan -out=tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
@@ -109,9 +97,12 @@ jobs:
           TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
 
       - name: Terragrunt Apply
-        id: terragrunt_apply
-        run: terragrunt apply -auto-approve tf.plan
-        working-directory: ${{ env.tg_dir }}
+        uses: gruntwork-io/terragrunt-action@v2
+        with:
+          tf_version: ${{ env.tf_version }}
+          tg_version: ${{ env.tg_version }}
+          tg_dir: ${{ env.tg_dir }}
+          tg_command: '--terragrunt-non-interactive --terragrunt-log-level info apply -auto-approve tf.plan'
         env:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
