@@ -16,7 +16,8 @@ inputs = {
   # container-specific environment variables
   container_vars = local.container_vars
 
-  ecr_registry = get_env("ECR_REGISTRY")
+  ecr_registry   = get_env("ECR_REGISTRY")
+  ecr_repository = get_env("ECR_REPOSITORY")
 }
 
 locals {
