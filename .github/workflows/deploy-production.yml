@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     outputs:
-      image_digest: ${{ steps.build_and_push.outputs.digest }}
+      image_digest: ${{ steps.build_and_push.outputs.digest || steps.get_digest_from_tagged_image.outputs.image_tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,6 +45,7 @@ jobs:
           echo "image_tag=${tag//\v/}" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image
+        if: ${{ github.event != "workflow_dispatch" }}
         id: build_and_push
         uses: docker/build-push-action@v5
         with:
@@ -53,6 +54,17 @@ jobs:
 #          platforms: linux/amd64,linux/arm64
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }}
+
+      # For manually triggered runs, grab the image digest from the already built image
+      - name: Get Digest from Tagged Image
+        if: ${{ github.event == "workflow_dispatch" }}
+        id: get_digest_from_tagged_image
+        run: |
+          image_digest=$(aws ecr describe-images
+            --repository-name ${{ vars.ECR_REPOSITORY }} \
+            --image-ids imageTag=${{ steps.set_image_tag.outputs.image_tag }} \
+            | jq -r '.imageDetails[].imageDigest')
+          echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
 
   production_deploy:
     runs-on: ubuntu-latest
