@@ -60,7 +60,7 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' }}
         id: get_digest_from_tagged_image
         run: |
-          image_digest=$(aws ecr describe-images
+          image_digest=$(aws ecr describe-images \
             --repository-name ${{ vars.ECR_REPOSITORY }} \
             --image-ids imageTag=${{ steps.set_image_tag.outputs.image_tag }} \
             | jq -r '.imageDetails[].imageDigest')
