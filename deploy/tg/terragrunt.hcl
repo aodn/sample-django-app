@@ -4,8 +4,9 @@ include "global" {
 }
 
 inputs = {
-  app_name    = get_env("APP_NAME")
-  environment = local.global.environment
+  app_name       = get_env("APP_NAME")
+  create_cluster = true
+  environment    = local.global.environment
 
   # fetch the ssm parameter names
   alb_parameter_name = get_env("ALB_PARAMETER_NAME")

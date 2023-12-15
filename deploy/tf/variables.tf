@@ -25,6 +25,12 @@ variable "app_hostnames" {
   type        = list(string)
 }
 
+variable "existing_cluster_arn" {
+  description = "ARN of the existing cluster to deploy the service/tasks to."
+  type        = string
+  default     = ""
+}
+
 variable "container_vars" {
   description = "Map of key/pair values to pass to the container definition."
   type        = map(any)
@@ -34,6 +40,12 @@ variable "cpu" {
   description = "The CPU capacity to allocate to the task."
   type        = number
   default     = 512
+}
+
+variable "create_cluster" {
+  description = "Whether or not to create a separate cluster for this deployment. If false, the name of an existing cluster must be provided."
+  type        = bool
+  default     = false
 }
 
 variable "ecr_registry" {
