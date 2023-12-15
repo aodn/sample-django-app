@@ -2,6 +2,10 @@ output "buckets" {
   value = module.s3.wrapper
 }
 
-output "ecs" {
-  value = module.ecs
+output "cluster" {
+  value = module.cluster
+}
+
+output "service" {
+  value = module.service
 }
