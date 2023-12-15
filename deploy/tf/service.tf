@@ -72,7 +72,7 @@ locals {
 resource "null_resource" "cluster_arn_precondition_check" {
   lifecycle {
     precondition {
-      condition     = (var.create_cluster == false && var.existing_cluster_arn != "" || var.create_cluster && var.existing_cluster_arn == "")
+      condition     = (var.create_cluster == false && var.cluster_arn != "" || var.create_cluster && var.cluster_arn == "")
       error_message = "The cluster ARN must be provided if 'create_cluster' is false. If you mean to create the cluster, set 'create_cluster' to true."
     }
   }
@@ -85,7 +85,7 @@ module "service" {
   depends_on = [module.s3.wrapper]
 
   name        = "${var.app_name}-${var.environment}"
-  cluster_arn = var.create_cluster ? module.cluster.arn : var.existing_cluster_arn
+  cluster_arn = var.create_cluster ? module.cluster.arn : var.cluster_arn
   capacity_provider_strategy = {
     env_strategy = {
       base              = 0
