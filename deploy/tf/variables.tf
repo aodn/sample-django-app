@@ -25,7 +25,7 @@ variable "app_hostnames" {
   type        = list(string)
 }
 
-variable "existing_cluster_arn" {
+variable "cluster_arn" {
   description = "ARN of the existing cluster to deploy the service/tasks to."
   type        = string
   default     = ""
@@ -45,7 +45,7 @@ variable "cpu" {
 variable "create_cluster" {
   description = "Whether or not to create a separate cluster for this deployment. If false, the name of an existing cluster must be provided."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "ecr_registry" {
