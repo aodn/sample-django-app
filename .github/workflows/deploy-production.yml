@@ -64,7 +64,7 @@ jobs:
             --repository-name ${{ vars.ECR_REPOSITORY }} \
             --image-ids imageTag=${{ steps.set_image_tag.outputs.image_tag }} \
             | jq -r '.imageDetails[].imageDigest')
-          echo "image_tag=$image_tag" >> $GITHUB_OUTPUT
+          echo "image_digest=$image_digest" >> $GITHUB_OUTPUT
 
   production_deploy:
     runs-on: ubuntu-latest
