@@ -5,10 +5,15 @@ locals {
     listen_port = var.proxy_port
   }
 
-  app_container_vars   = [for k, v in var.container_vars : { name = upper(k), value = v }]
+  app_container_vars   = [for k, v in var.env_vars : { name = upper(k), value = v }]
   nginx_container_vars = [for k, v in local.nginx_vars : { name = upper(k), value = v }]
 
-  container_definitions = var.nginx_proxy ? merge(local.app_container_definition, local.nginx_container_definition) : local.app_container_definition
+  container_definitions = (
+    var.nginx_proxy ?
+    merge(local.app_container_definition, local.nginx_container_definition) :
+    local.app_container_definition
+  )
+
   app_container_definition = {
     app = {
       name = var.app_container_name
@@ -18,7 +23,7 @@ locals {
         "${var.ecr_registry}/${var.ecr_repository}:${var.image}"
       )
       health_check = {
-        command = ["CMD-SHELL", "uwsgi-is-ready --stats-socket /tmp/statsock > /dev/null 2>&1 || exit 1"]
+        command = length(var.app_health_check) > 0 ? split(",", var.app_health_check) : []
       }
       readonly_root_filesystem = false
       essential                = true
@@ -73,7 +78,7 @@ resource "null_resource" "cluster_arn_precondition_check" {
   lifecycle {
     precondition {
       condition     = (var.create_cluster == false && var.cluster_arn != "" || var.create_cluster && var.cluster_arn == "")
-      error_message = "The cluster ARN must be provided if 'create_cluster' is false. If you mean to create the cluster, set 'create_cluster' to true."
+      error_message = "The cluster ARN must be provided if 'create_cluster' is false. If you mean to have this module create the cluster, set 'create_cluster' to true."
     }
   }
 }
@@ -81,8 +86,6 @@ resource "null_resource" "cluster_arn_precondition_check" {
 module "service" {
   source  = "terraform-aws-modules/ecs/aws//modules/service"
   version = "~> 5.7.0"
-
-  depends_on = [module.s3.wrapper]
 
   name        = "${var.app_name}-${var.environment}"
   cluster_arn = var.create_cluster ? module.cluster.arn : var.cluster_arn
@@ -145,27 +148,7 @@ module "service" {
     }
   }
 
-  tasks_iam_role_statements = [
-    {
-      actions = [
-        "s3:PutObject",
-        "s3:GetObjectAcl",
-        "s3:GetObject",
-        "s3:ListBucket",
-        "s3:DeleteObject",
-        "s3:PutObjectAcl"
-      ]
-      resources = flatten([for bucket in module.s3.wrapper :
-        split(",", "arn:aws:s3:::${bucket.s3_bucket_id},arn:aws:s3:::${bucket.s3_bucket_id}/*"
-      )])
-    },
-    {
-      actions = [
-        "secretsmanager:GetSecretValue"
-      ]
-      resources = ["arn:aws:secretsmanager:${data.aws_region.current.name}:*:secret:/rds*"]
-    }
-  ]
+  tasks_iam_role_statements = var.iam_statements
 
   timeouts = {
     create = "10m"
