@@ -4,7 +4,7 @@ locals {
   environment  = get_env("ENVIRONMENT")
   project_name = get_env("APP_NAME")
   state_bucket = "tfstate-${local.aws_account}-${local.aws_region}"
-  state_key    = "apps/${local.project_name}/${local.environment}/ecs.tfstate"
+  state_key    = "apps/${local.project_name}/${local.environment}/${basename(get_terragrunt_dir())}.tfstate"
 }
 
 generate "providers" {
@@ -44,8 +44,4 @@ remote_state {
     disable_bucket_update       = true
     encrypt                     = true
   }
-}
-
-terraform {
-  source = "..//tf"
 }
