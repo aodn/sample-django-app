@@ -1,21 +1,20 @@
-name: Deploy Production
+name: Build, Test and Push - Production
 
 on:
   release:
       types:
         - published
-  workflow_dispatch:
 
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  build_push:
+  build_test_push:
     runs-on: ubuntu-latest
     environment: production
     outputs:
-      image_digest: ${{ steps.build_and_push.outputs.digest || steps.get_digest_from_tagged_image.outputs.image_tag }}
+      image_digest: ${{ steps.build_and_push.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,6 +24,30 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
+      - name: Setup Docker Structure Test
+        run: >
+          curl -LO
+          https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64
+          && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
+          /usr/local/bin/container-structure-test
+
+      - name: Set Image Tag
+        id: set_image_tag
+        run: |
+          tag=${{ github.ref_name }}
+          echo "image_tag=${tag//\v/}" >> $GITHUB_OUTPUT
+
+      - name: Build Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          load: true
+          tags: ${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }}
+
+      - name: Test Docker Image
+        run: |
+          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }} --config tests/config.yaml
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,12 +60,6 @@ jobs:
         uses: docker/login-action@v3
         with:
           registry: ${{ vars.ECR_REGISTRY }}
-
-      - name: Set Image Tag
-        id: set_image_tag
-        run: |
-          tag=${{ github.ref_name }}
-          echo "image_tag=${tag//\v/}" >> $GITHUB_OUTPUT
 
       - name: Build and Push Docker Image
         if: ${{ github.event_name != 'workflow_dispatch' }}
@@ -73,7 +90,7 @@ jobs:
       tf_version: '1.5.7'
       tg_version: '0.54.0'
       tg_dir: './deploy/tg'
-    needs: [build_push]
+    needs: [build_test_push]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -106,7 +123,7 @@ jobs:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
       - name: Terragrunt Apply
         uses: gruntwork-io/terragrunt-action@v2
@@ -119,4 +136,36 @@ jobs:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
+
+  trigger_deploy:
+    runs-on: ubuntu-latest
+    needs: [build_test_push]
+    steps:
+      - name: Generate App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
+        with:
+          app-id: ${{ vars.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: "appdeploy"
+
+      - name: Trigger Deploy Workflow
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ steps.app-token.outputs.token }}
+          retries: 3
+          retry-exempt-status-codes: 204
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'aodn',
+              repo: 'appdeploy',
+              workflow_id: 'deploy.yml',
+              ref: 'main',
+              inputs: {
+                app_name: 'sample-django-app',
+                environment: 'production',
+                image_tag: '${{ needs.build_test_push.outputs.image_digest }}',
+              }
+            })

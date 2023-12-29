@@ -1,20 +1,24 @@
-name: Build, Test and Deploy Development
+name: Build, Test and Push - Development
 
 on:
   pull_request:
     branches:
       - master
 
+concurrency:
+    group: ${{ github.ref }}
+    cancel-in-progress: true
+
 permissions:
-  id-token: write   # This is required for requesting the JWT
-  contents: read    # This is required for actions/checkout
+  id-token: write
+  contents: read
 
 jobs:
   build_test_push:
     runs-on: ubuntu-latest
     environment: development
     outputs:
-      image_tag: ${{ steps.set_image_tag.outputs.image_tag }}
+      image_digest: ${{ steps.build_and_push.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -75,57 +79,34 @@ jobs:
           push: true
           tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }}
 
-  development_deploy:
+  trigger_deploy:
     runs-on: ubuntu-latest
-    environment: development
-    env:
-      tf_version: '1.5.7'
-      tg_version: '0.54.0'
-      tg_dir: './deploy/tg'
     needs: [build_test_push]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Generate App Token
+        uses: actions/create-github-app-token@v1
+        id: app-token
         with:
-          audience: sts.amazonaws.com
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          app-id: ${{ vars.DEPLOY_APP_ID }}
+          private-key: ${{ secrets.DEPLOY_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: "appdeploy"
 
-      - name: Expose github environment as shell variables
-        env:
-          SECRETS_CONTEXT: ${{ toJson(secrets) }}
-          VARS_CONTEXT: ${{ toJson(vars) }}
-        run: |
-          EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
-          to_envs() { jq -r "to_entries[] | \"\(.key)<<$EOF\n\(.value)\n$EOF\n\""; }
-          echo "$VARS_CONTEXT" | to_envs >> $GITHUB_ENV
-          echo "$SECRETS_CONTEXT" | to_envs >> $GITHUB_ENV
-
-      - name: Terragrunt Plan
-        uses: gruntwork-io/terragrunt-action@v2
+      - name: Trigger Deploy Workflow
+        uses: actions/github-script@v7
         with:
-          tf_version: ${{ env.tf_version }}
-          tg_version: ${{ env.tg_version }}
-          tg_dir: ${{ env.tg_dir }}
-          tg_command: 'run-all plan -out=tf.plan'
-        env:
-          TF_INPUT: 0
-          TF_IN_AUTOMATION: true
-          # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_tag }}
-
-      - name: Terragrunt Apply
-        uses: gruntwork-io/terragrunt-action@v2
-        with:
-          tf_version: ${{ env.tf_version }}
-          tg_version: ${{ env.tg_version }}
-          tg_dir: ${{ env.tg_dir }}
-          tg_command: '--terragrunt-non-interactive --terragrunt-log-level info run-all apply -auto-approve tf.plan'
-        env:
-          TF_INPUT: 0
-          TF_IN_AUTOMATION: true
-          # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_tag }}
+          github-token: ${{ steps.app-token.outputs.token }}
+          retries: 3
+          retry-exempt-status-codes: 204
+          script: |
+            github.rest.actions.createWorkflowDispatch({
+              owner: 'aodn',
+              repo: 'appdeploy',
+              workflow_id: 'deploy.yml',
+              ref: 'main',
+              inputs: {
+                app_name: 'sample-django-app',
+                environment: 'development',
+                image_tag: '${{ needs.build_test_push.outputs.image_digest }}',
+              }
+            })
