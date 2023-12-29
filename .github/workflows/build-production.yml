@@ -123,7 +123,7 @@ jobs:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
       - name: Terragrunt Apply
         uses: gruntwork-io/terragrunt-action@v2
@@ -136,7 +136,7 @@ jobs:
           TF_INPUT: 0
           TF_IN_AUTOMATION: true
           # get the image digest from the build job with optional override from vars context
-          TF_VAR_image: ${{ vars.IMAGE || needs.build_push.outputs.image_digest }}
+          TF_VAR_image: ${{ vars.IMAGE || needs.build_test_push.outputs.image_digest }}
 
   trigger_deploy:
     runs-on: ubuntu-latest
