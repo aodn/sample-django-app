@@ -89,7 +89,7 @@ jobs:
         with:
           task-definition: task-definition.json
           container-name: app
-          image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ needs.build_push.outputs.image_digest }}
+          image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}@${{ needs.build_push.outputs.image_digest }}
 
       - name: Display Rendered Template
         id: display-rendered-template
