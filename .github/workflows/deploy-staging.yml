@@ -70,6 +70,13 @@ jobs:
     environment: staging
     needs: [build_push]
     steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          audience: sts.amazonaws.com
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+
       - name: Get Currently Running Task Definition
         id: get-current-task-definition
         run: |
