@@ -84,7 +84,7 @@ jobs:
             --task-definition ${{ vars.FAMILY }} \
             --query taskDefinition > task-definition.json
 
-      - name: Update Image Tag
+      - name: Update Task Definition with Image Digest
         id: update-api-image-tag
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
