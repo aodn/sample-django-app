@@ -31,7 +31,7 @@ jobs:
         with:
           context: .
           load: true
-          tags: ${{ vars.ECR_REPOSITORY }}:latest
+          tags: ${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -53,7 +53,7 @@ jobs:
 #          Only building for AMD64 for now
 #          platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:latest
+          tags: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}:${{ github.sha }}
 
       - name: Push Image Digest to SSM
         run: |
@@ -91,10 +91,6 @@ jobs:
           task-definition: task-definition.json
           container-name: app
           image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}@${{ needs.build_push.outputs.image_digest }}
-
-      - name: Display Rendered Template
-        id: display-rendered-template
-        run: cat ${{ steps.update-api-image-tag.outputs.task-definition }} | jq -r
 
       - name: Deploy to Amazon ECS service
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1

@@ -91,10 +91,6 @@ jobs:
           container-name: app
           image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}@${{ needs.build_push.outputs.image_digest }}
 
-      - name: Display Rendered Template
-        id: display-rendered-template
-        run: cat ${{ steps.update-api-image-tag.outputs.task-definition }} | jq -r
-
       - name: Deploy to Amazon ECS service
         uses: aws-actions/amazon-ecs-deploy-task-definition@v1
         with:
