@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 jobs:
-  build_test_push:
+  build_test:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -34,23 +34,13 @@ jobs:
           && chmod +x container-structure-test-linux-amd64 && sudo mv container-structure-test-linux-amd64
           /usr/local/bin/container-structure-test
 
-      - name: Set Image Tag
-        id: set_image_tag
-        run: |
-          branch_name=${{ github.head_ref || github.ref_name }}
-          tag=${{ env.TAG_PREFIX}}-${branch_name//\//-}
-          echo "$tag"
-          echo "image_tag=$tag" >> $GITHUB_OUTPUT
-        env:
-          TAG_PREFIX: test
-
       - name: Build Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           load: true
-          tags: ${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }}
+          tags: image:${{ github.sha }}
 
       - name: Test Docker Image
         run: |
-          container-structure-test test --image ${{ vars.ECR_REPOSITORY }}:${{ steps.set_image_tag.outputs.image_tag }} --config tests/config.yaml
+          container-structure-test test --image image:${{ github.sha }} --config tests/config.yaml
