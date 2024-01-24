@@ -1,4 +1,4 @@
-name: Deploy Production
+name: Build Production
 
 on:
   push:
@@ -24,13 +24,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Build Docker Image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          load: true
-          tags: ${{ vars.ECR_REPOSITORY }}:${{ github.ref_name }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
