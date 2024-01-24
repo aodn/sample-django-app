@@ -5,6 +5,9 @@ on:
     branches:
       - master
       - main
+    paths-ignore:
+      - '**/*.md'
+      - '.github/environment/**'
 
 concurrency:
     group: ${{ github.ref }}
