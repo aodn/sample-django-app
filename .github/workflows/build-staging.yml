@@ -65,38 +65,43 @@ jobs:
         env:
           digest: ${{ steps.build_and_push.outputs.digest }}
 
-  deploy:
-    runs-on: ubuntu-latest
-    environment: staging
-    needs: [build_push]
-    steps:
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          audience: sts.amazonaws.com
-          aws-region: ${{ vars.AWS_REGION }}
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: Get Currently Running Task Definition
-        id: get-current-task-definition
-        run: |
-          aws ecs describe-task-definition \
-            --task-definition ${{ vars.FAMILY }} \
-            --query taskDefinition > task-definition.json
+# Optional deployment job if you want to update the task immediately
+# However, the appdeploy repository is configured to run drift jobs on an hourly basis
+# See: https://terrateam.io/docs/features/drift-detection
 
-      - name: Update Task Definition with Image Digest
-        id: update-api-image-tag
-        uses: aws-actions/amazon-ecs-render-task-definition@v1
-        with:
-          task-definition: task-definition.json
-          container-name: app
-          image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}@${{ needs.build_push.outputs.image_digest }}
-
-      - name: Deploy to Amazon ECS service
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
-        with:
-          task-definition: ${{ steps.update-api-image-tag.outputs.task-definition }}
-          service: ${{ vars.FAMILY }}
-          cluster: ${{ vars.CLUSTER }}
-          force-new-deployment: true
-          wait-for-service-stability: true
+#  deploy:
+#    runs-on: ubuntu-latest
+#    environment: staging
+#    needs: [build_push]
+#    steps:
+#      - name: Configure AWS Credentials
+#        uses: aws-actions/configure-aws-credentials@v4
+#        with:
+#          audience: sts.amazonaws.com
+#          aws-region: ${{ vars.AWS_REGION }}
+#          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+#
+#      - name: Get Currently Running Task Definition
+#        id: get-current-task-definition
+#        run: |
+#          aws ecs describe-task-definition \
+#            --task-definition ${{ vars.FAMILY }} \
+#            --query taskDefinition > task-definition.json
+#
+#      - name: Update Task Definition with Image Digest
+#        id: update-api-image-tag
+#        uses: aws-actions/amazon-ecs-render-task-definition@v1
+#        with:
+#          task-definition: task-definition.json
+#          container-name: app
+#          image: ${{ vars.ECR_REGISTRY }}/${{ vars.ECR_REPOSITORY }}@${{ needs.build_push.outputs.image_digest }}
+#
+#      - name: Deploy to Amazon ECS service
+#        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+#        with:
+#          task-definition: ${{ steps.update-api-image-tag.outputs.task-definition }}
+#          service: ${{ vars.FAMILY }}
+#          cluster: ${{ vars.CLUSTER }}
+#          force-new-deployment: true
+#          wait-for-service-stability: true
