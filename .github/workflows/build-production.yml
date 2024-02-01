@@ -15,7 +15,7 @@ env:
 jobs:
   build_push:
     runs-on: ubuntu-latest
-    environment: ${{ env.environment_name }}
+    environment: production
     outputs:
       image_digest: ${{ steps.build_and_push.outputs.digest }}
     steps:
