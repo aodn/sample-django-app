@@ -10,14 +10,13 @@ permissions:
   contents: read
 
 env:
+  app_name: sample-django-app
   environment_name: production
 
 jobs:
   build_push:
     runs-on: ubuntu-latest
     environment: production
-    outputs:
-      image_digest: ${{ steps.build_and_push.outputs.digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +28,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS Credentials
+        id: aws_auth
         uses: aws-actions/configure-aws-credentials@v4
         with:
           audience: sts.amazonaws.com
@@ -53,7 +53,7 @@ jobs:
       - name: Push Image Digest to SSM
         run: |
           aws ssm put-parameter \
-            --name "/apps/sample-django-app/${{ env.environment_name }}/image_digest" \
+            --name "/apps/${{ env.app_name }}/${{ env.environment_name }}/image_digest" \
             --type "String" \
             --value "$digest" \
             --overwrite
@@ -86,7 +86,7 @@ jobs:
               workflow_id: 'deploy.yml',
               ref: 'main',
               inputs: {
-                app_name: 'sample-django-app',
+                app_name: '${{ env.app_name }}',
                 environment: '${{ env.environment_name }}'
               }
             })

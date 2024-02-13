@@ -10,8 +10,8 @@ on:
       - '.github/environment/**'
 
 concurrency:
-    group: ${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   id-token: write
