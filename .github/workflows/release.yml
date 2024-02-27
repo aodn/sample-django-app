@@ -58,9 +58,10 @@ jobs:
 
       - name: Upload Docker Metadata to Release
         run: |
-          echo ${{ steps.build_and_push.outputs.metadata }} >> metadata.json
+          json='${{ steps.build_and_push.outputs.metadata }}'
+          echo "$json" > metadata.json
           gh release upload ${{ github.ref }} metadata.json
-        with:
+        env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
 
   trigger_staging_deploy:
