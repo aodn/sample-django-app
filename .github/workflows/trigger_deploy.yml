@@ -16,7 +16,7 @@ on:
           - staging
           - production
       digest:
-        required: true
+        required: false
         description: The image digest to pass to the deploy job.
         type: string
   workflow_call:
@@ -25,7 +25,7 @@ on:
         required: true
         type: string
       digest:
-        required: true
+        required: false
         type: string
       environment:
         required: true
@@ -44,6 +44,7 @@ jobs:
           role-to-assume: ${{ vars.AWS_ROLE_ARN }}
 
       - name: Push Image Digest to SSM
+        if: ${{ inputs.digest != '' }}
         run: |
           aws ssm put-parameter \
             --name "/apps/${{ inputs.app_name }}/${{ inputs.environment }}/image_digest" \
